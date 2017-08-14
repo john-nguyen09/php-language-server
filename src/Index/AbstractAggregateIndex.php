@@ -99,20 +99,48 @@ abstract class AbstractAggregateIndex implements ReadableIndex
     }
 
     /**
-     * Returns an associative array [string => Definition] that maps fully qualified symbol names
-     * to Definitions
+     * Returns a Generator providing an associative array [string => Definition]
+     * that maps fully qualified symbol names to Definitions (global or not)
      *
-     * @return Definition[]
+     * @return \Generator providing Definition[]
      */
-    public function getDefinitions(): array
+    public function getDefinitions(): \Generator
     {
-        $defs = [];
         foreach ($this->getIndexes() as $index) {
-            foreach ($index->getDefinitions() as $fqn => $def) {
-                $defs[$fqn] = $def;
+            foreach ($index->getDefinitions() as $fqn => $definitions) {
+                yield $fqn => $definition;
             }
         }
-        return $defs;
+    }
+
+    /**
+     * Returns a Generator providing an associative array [string => Definition]
+     * that maps fully qualified symbol names to global Definitions
+     *
+     * @return \Generator providing Definitions[]
+     */
+    public function getGlobalDefinitions(): \Generator
+    {
+        foreach ($this->getIndexes() as $index) {
+            foreach ($index->getGlobalDefinitions() as $fqn => $definition) {
+                yield $fqn => $definition;
+            }
+        }
+    }
+
+    /**
+     * Returns a Generator providing the Definitions that are in the given namespace
+     *
+     * @param string $namespace
+     * @return \Generator providing Definitions[]
+     */
+    public function getDefinitionsForNamespace(string $namespace): \Generator
+    {
+        foreach ($this->getIndexes() as $index) {
+            foreach ($index->getDefinitionsForNamespace($namespace) as $fqn => $definition) {
+                yield $fqn => $definition;
+            }
+        }
     }
 
     /**
@@ -132,19 +160,17 @@ abstract class AbstractAggregateIndex implements ReadableIndex
     }
 
     /**
-     * Returns all URIs in this index that reference a symbol
+     * Returns a Generator providing all URIs in this index that reference a symbol
      *
      * @param string $fqn The fully qualified name of the symbol
-     * @return string[]
+     * @return \Generator providing string[]
      */
-    public function getReferenceUris(string $fqn): array
+    public function getReferenceUris(string $fqn): \Generator
     {
-        $refs = [];
         foreach ($this->getIndexes() as $index) {
-            foreach ($index->getReferenceUris($fqn) as $ref) {
-                $refs[] = $ref;
+            foreach ($index->getReferenceUris($fqn) as $uri) {
+                yield $uri;
             }
         }
-        return $refs;
     }
 }

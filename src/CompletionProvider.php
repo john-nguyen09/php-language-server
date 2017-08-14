@@ -201,15 +201,12 @@ class CompletionProvider
                 $this->definitionResolver->resolveExpressionNodeToType($node->dereferencableExpression)
             );
 
-            // Add the object access operator to only get members of all parents
-            $prefixes = [];
-            foreach ($this->expandParentFqns($fqns) as $prefix) {
-                $prefixes[] = $prefix . '->';
-            }
-
-            // Collect all definitions that match any of the prefixes
-            foreach ($this->index->getDefinitions() as $fqn => $def) {
-                foreach ($prefixes as $prefix) {
+            // The namespaces of the symbol and its parents (eg the implemented interfaces)
+            foreach ($this->expandParentFqns($fqns) as $namespace) {
+                // Collect namespaces definitions
+                foreach ($this->index->getDefinitionsForNamespace($namespace) as $fqn => $def) {
+                    // Add the object access operator to only get members of all parents
+                    $prefix = $namespace . '->';
                     if (substr($fqn, 0, strlen($prefix)) === $prefix && !$def->isGlobal) {
                         $list->items[] = CompletionItem::fromDefinition($def);
                     }
@@ -234,16 +231,13 @@ class CompletionProvider
                 $classType = $this->definitionResolver->resolveExpressionNodeToType($scoped->scopeResolutionQualifier)
             );
 
-            // Append :: operator to only get static members of all parents
-            $prefixes = [];
-            foreach ($this->expandParentFqns($fqns) as $prefix) {
-                $prefixes[] = $prefix . '::';
-            }
-
-            // Collect all definitions that match any of the prefixes
-            foreach ($this->index->getDefinitions() as $fqn => $def) {
-                foreach ($prefixes as $prefix) {
-                    if (substr(strtolower($fqn), 0, strlen($prefix)) === strtolower($prefix) && !$def->isGlobal) {
+            // The namespaces of the symbol and its parents (eg the implemented interfaces)
+            foreach ($this->expandParentFqns($fqns) as $namespace) {
+                // Collect namespaces definitions
+                foreach ($this->index->getDefinitionsForNamespace($namespace) as $fqn => $def) {
+                    // Append :: operator to only get static members of all parents
+                    $prefix = strtolower($namespace . '::');
+                    if (substr(strtolower($fqn), 0, strlen($prefix)) === $prefix && !$def->isGlobal) {
                         $list->items[] = CompletionItem::fromDefinition($def);
                     }
                 }
@@ -310,26 +304,22 @@ class CompletionProvider
             // Suggest global symbols that either
             //  - start with the current namespace + prefix, if the Name node is not fully qualified
             //  - start with just the prefix, if the Name node is fully qualified
-            foreach ($this->index->getDefinitions() as $fqn => $def) {
+            foreach ($this->index->getGlobalDefinitions() as $fqn => $def) {
 
                 $fqnStartsWithPrefix = substr($fqn, 0, $prefixLen) === $prefix;
 
                 if (
-                    // Exclude methods, properties etc.
-                    $def->isGlobal
-                    && (
-                        !$prefix
+                    !$prefix
+                    || (
+                        // Either not qualified, but a matching prefix with global fallback
+                        ($def->roamed && !$isQualified && $fqnStartsWithPrefix)
+                        // Or not in a namespace or a fully qualified name or AND matching the prefix
+                        || ((!$namespaceNode || $isFullyQualified) && $fqnStartsWithPrefix)
+                        // Or in a namespace, not fully qualified and matching the prefix + current namespace
                         || (
-                            // Either not qualified, but a matching prefix with global fallback
-                            ($def->roamed && !$isQualified && $fqnStartsWithPrefix)
-                            // Or not in a namespace or a fully qualified name or AND matching the prefix
-                            || ((!$namespaceNode || $isFullyQualified) && $fqnStartsWithPrefix)
-                            // Or in a namespace, not fully qualified and matching the prefix + current namespace
-                            || (
-                                $namespaceNode
-                                && !$isFullyQualified
-                                && substr($fqn, 0, $namespacedPrefixLen) === $namespacedPrefix
-                            )
+                            $namespaceNode
+                            && !$isFullyQualified
+                            && substr($fqn, 0, $namespacedPrefixLen) === $namespacedPrefix
                         )
                     )
                     // Only suggest classes for `new`
