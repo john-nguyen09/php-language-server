@@ -60,37 +60,45 @@ class SignatureHelpProvider
     public function provideSignature(PhpDocument $doc, Position $pos) : SignatureHelp
     {
         $node = $doc->getNodeAtPosition($pos);
-        $arge = null;
-        while ($node &&
-            !($node instanceof ArgumentExpressionList) &&
+        $offset = $node === null ? -1 : $pos->toOffset($node->getFileContents());
+        if (!$node) {
+            return new SignatureHelp;
+        }
+        while (
             !($node instanceof CallExpression) &&
+            !($node instanceof ArgumentExpressionList) &&
             $node->parent
         ) {
-            if ($node instanceof ArgumentExpression) {
-                $arge = $node;
-            }
             $node = $node->parent;
         }
-        if (!($node instanceof ArgumentExpressionList) &&
+
+        if (
+            !($node instanceof ArgumentExpressionList) &&
             !($node instanceof CallExpression)
         ) {
             return new SignatureHelp;
         }
+
         $count = null;
         if ($node instanceof ArgumentExpressionList) {
             $count = 0;
-            foreach ($node->getElements() as $param) {
-                if ($param === $arge) {
+            foreach ($node->getElements() as $element) {
+                if (!($element instanceof ArgumentExpression)) {
+                    continue;
+                }
+                if ($offset < $element->getFullStart()) {
                     break;
                 }
-                $count ++;
+                $count++;
             }
-            while ($node && !($node instanceof CallExpression) && $node->parent) {
-                $node = $node->parent;
-            }
-            if (!($node instanceof CallExpression)) {
-                return new SignatureHelp;
-            }
+            $count--;
+        }
+
+        while ($node && !($node instanceof CallExpression) && $node->parent) {
+            $node = $node->parent;
+        }
+        if (!($node instanceof CallExpression)) {
+            return new SignatureHelp;
         }
         $def = $this->definitionResolver->resolveReferenceNodeToDefinition($node->callableExpression);
         if (!$def) {
@@ -105,7 +113,7 @@ class SignatureHelpProvider
                 )
             ],
             0,
-            $count !== null && $def->parameters !== null && $count < count($def->parameters) ? $count : null
+            $count
         );
     }
 }

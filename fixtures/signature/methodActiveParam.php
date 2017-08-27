@@ -5,6 +5,14 @@ class HelpClass5
     public function method(string $param = "", int $count = 0, bool $test = null)
     {
     }
+    public function method2(
+        string $param = "",
+        int $count = 0,
+        bool $test = null
+    )
+    {
+
+    }
     public function test()
     {
         $this->method();
@@ -12,4 +20,5 @@ class HelpClass5
 }
 
 $a = new HelpClass5;
+$a->method("asdf", 123, true);
 $a->method("asdf", 123, true);

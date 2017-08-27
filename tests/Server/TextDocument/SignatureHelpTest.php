@@ -224,25 +224,51 @@ class SignatureHelpTest extends TestCase
     {
         $completionUri = pathToUri(__DIR__ . '/../../../fixtures/signature/methodActiveParam.php');
         $this->loader->open($completionUri, file_get_contents($completionUri));
-        $result = $this->textDocument->signatureHelp(
-            new TextDocumentIdentifier($completionUri),
-            new Position(14, 21)
-        )->wait();
 
-        $this->assertEquals(new SignatureHelp(
-            [
-                new SignatureInformation(
-                    'method(string $param = "", int $count = 0, bool $test = null)',
-                    null,
-                    [
-                        new ParameterInformation('string $param = ""'),
-                        new ParameterInformation('int $count = 0'),
-                        new ParameterInformation('bool $test = null')
-                    ]
-                )
-            ],
-            0,
-            1
-        ), $result);
+        for ($i = 18; $i <= 22; $i++) {
+            $result = $this->textDocument->signatureHelp(
+                new TextDocumentIdentifier($completionUri),
+                new Position(22, $i)
+            )->wait();
+    
+            $this->assertEquals(new SignatureHelp(
+                [
+                    new SignatureInformation(
+                        'method(string $param = "", int $count = 0, bool $test = null)',
+                        null,
+                        [
+                            new ParameterInformation('string $param = ""'),
+                            new ParameterInformation('int $count = 0'),
+                            new ParameterInformation('bool $test = null')
+                        ]
+                    )
+                ],
+                0,
+                1
+            ), $result);
+        }
+
+        for ($i = 23; $i <= 28; $i++) {
+            $result = $this->textDocument->signatureHelp(
+                new TextDocumentIdentifier($completionUri),
+                new Position(23, $i)
+            )->wait();
+    
+            $this->assertEquals(new SignatureHelp(
+                [
+                    new SignatureInformation(
+                        'method(string $param = "", int $count = 0, bool $test = null)',
+                        null,
+                        [
+                            new ParameterInformation('string $param = ""'),
+                            new ParameterInformation('int $count = 0'),
+                            new ParameterInformation('bool $test = null')
+                        ]
+                    )
+                ],
+                0,
+                2
+            ), $result);
+        }
     }
 }
