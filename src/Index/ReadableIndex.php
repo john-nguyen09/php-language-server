@@ -30,28 +30,12 @@ interface ReadableIndex extends EmitterInterface
     public function isStaticComplete(): bool;
 
     /**
-     * Returns a Generator providing an associative array [string => Definition]
-     * that maps fully qualified symbol names to Definitions (global or not)
+     * Returns an associative array [string => Definition] that maps fully qualified symbol names
+     * to Definitions
      *
-     * @return \Generator providing Definition[]
+     * @return Definitions[]
      */
-    public function getDefinitions(): \Generator;
-
-    /**
-     * Returns a Generator providing an associative array [string => Definition]
-     * that maps fully qualified symbol names to global Definitions
-     *
-     * @return \Generator providing Definitions[]
-     */
-    public function getGlobalDefinitions(): \Generator;
-
-    /**
-     * Returns a Generator providing the Definitions that are in the given namespace
-     *
-     * @param string $namespace
-     * @return \Generator providing Definitions[]
-     */
-    public function getDefinitionsForNamespace(string $namespace): \Generator;
+    public function getDefinitions(): array;
 
     /**
      * Returns the Definition object by a specific FQN
@@ -63,10 +47,10 @@ interface ReadableIndex extends EmitterInterface
     public function getDefinition(string $fqn, bool $globalFallback = false);
 
     /**
-     * Returns a Generator providing all URIs in this index that reference a symbol
+     * Returns all URIs in this index that reference a symbol
      *
      * @param string $fqn The fully qualified name of the symbol
-     * @return \Generator providing string[]
+     * @return string[]
      */
-    public function getReferenceUris(string $fqn): \Generator;
+    public function getReferenceUris(string $fqn): array;
 }

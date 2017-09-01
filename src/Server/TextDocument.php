@@ -238,9 +238,10 @@ class TextDocument
                         return [];
                     }
                 }
-                $refDocuments = yield Promise\all(iterator_to_array(
-                    $this->getOrLoadReferences($fqn))
-                );
+                $refDocuments = yield Promise\all(array_map(
+                    [$this->documentLoader, 'getOrLoad'],
+                    $this->index->getReferenceUris($fqn)
+                ));
                 foreach ($refDocuments as $document) {
                     $refs = $document->getReferenceNodesByFqn($fqn);
                     if ($refs !== null) {
@@ -430,18 +431,5 @@ class TextDocument
             $document = yield $this->documentLoader->getOrLoad($textDocument->uri);
             return $this->signatureHelpProvider->provideSignature($document, $position);
         });
-    }
-
-    /**
-     * Gets or loads the documents referencing the given FQN.
-     *
-     * @param string $fqn
-     * @return \Generator providing Promise
-     */
-    private function getOrLoadReferences(string $fqn): \Generator
-    {
-        foreach ($this->index->getReferenceUris($fqn) as $ref) {
-            yield $this->documentLoader->getOrLoad($ref);
-        }
     }
 }
