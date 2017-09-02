@@ -5,6 +5,7 @@ namespace LanguageServer\Index;
 
 use LanguageServer\Definition;
 use Sabre\Event\EmitterTrait;
+use Tries\RadixTrie;
 
 /**
  * Represents the index of a project or dependency
@@ -22,6 +23,13 @@ class Index implements ReadableIndex, \Serializable
     private $definitions = [];
 
     /**
+     * A radix tree to store fqn and definitions
+     *
+     * @var RadixTrie
+     */
+    private $radixTrie;
+
+    /**
      * An associative array that maps fully qualified symbol names to arrays of document URIs that reference the symbol
      *
      * @var string[][]
@@ -37,6 +45,11 @@ class Index implements ReadableIndex, \Serializable
      * @var bool
      */
     private $staticComplete = false;
+
+    public function __construct()
+    {
+        $this->radixTrie = new RadixTrie();
+    }
 
     /**
      * Marks this index as complete
@@ -122,8 +135,20 @@ class Index implements ReadableIndex, \Serializable
      */
     public function setDefinition(string $fqn, Definition $definition)
     {
+        if (!empty($fqn)) {
+            $this->radixTrie->add($fqn, $definition);
+        }
         $this->definitions[$fqn] = $definition;
         $this->emit('definition-added');
+    }
+
+    public function findWithPrefix($prefix)
+    {
+        if (empty($prefix)) {
+            return $this->definitions;
+        }
+
+        return $this->getRadixTrie()->search($prefix);
     }
 
     /**
@@ -219,7 +244,21 @@ class Index implements ReadableIndex, \Serializable
             'definitions' => $this->definitions,
             'references' => $this->references,
             'complete' => $this->complete,
-            'staticComplete' => $this->staticComplete
+            'staticComplete' => $this->staticComplete,
+            'radixTrie' => $this->radixTrie
         ]);
+    }
+
+    protected function getRadixTrie()
+    {
+        if (!isset($this->radixTrie)) {
+            $this->radixTrie = new RadixTrie;
+
+            foreach ($this->getDefinitions() as $fqn => $def) {
+                $this->radixTrie->add($fqn, $def);
+            }
+        }
+
+        return $this->radixTrie;
     }
 }

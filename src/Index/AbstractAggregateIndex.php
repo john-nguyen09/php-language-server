@@ -115,6 +115,18 @@ abstract class AbstractAggregateIndex implements ReadableIndex
         return $defs;
     }
 
+    public function findWithPrefix($prefix)
+    {
+        $defs = [];
+        foreach ($this->getIndexes() as $index) {
+            foreach ($index->findWithPrefix($prefix) as $fqn => $def) {
+                $defs[$fqn] = $def;
+            }
+        }
+
+        return $defs;
+    }
+
     /**
      * Returns the Definition object by a specific FQN
      *

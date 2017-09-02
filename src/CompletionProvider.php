@@ -10,7 +10,9 @@ use LanguageServer\Protocol\{
     Position,
     CompletionList,
     CompletionItem,
-    CompletionItemKind
+    CompletionItemKind,
+    SymbolInformation,
+    SymbolKind
 };
 use Microsoft\PhpParser;
 use Microsoft\PhpParser\Node;
@@ -208,11 +210,10 @@ class CompletionProvider
             }
 
             // Collect all definitions that match any of the prefixes
-            foreach ($this->index->getDefinitions() as $fqn => $def) {
-                foreach ($prefixes as $prefix) {
-                    if (substr($fqn, 0, strlen($prefix)) === $prefix && !$def->isGlobal) {
-                        $list->items[] = CompletionItem::fromDefinition($def);
-                    }
+            foreach ($prefixes as $prefix) {
+                $definitions = $this->index->findWithPrefix($prefix);
+                foreach ($definitions as $def) {
+                    $list->items[] = CompletionItem::fromDefinition($def);
                 }
             }
 
@@ -237,13 +238,15 @@ class CompletionProvider
             // Append :: operator to only get static members of all parents
             $prefixes = [];
             foreach ($this->expandParentFqns($fqns) as $prefix) {
+                $this->client->window->logMessage(MessageType::INFO, "prefix: $prefix");
                 $prefixes[] = $prefix . '::';
             }
 
             // Collect all definitions that match any of the prefixes
-            foreach ($this->index->getDefinitions() as $fqn => $def) {
-                foreach ($prefixes as $prefix) {
-                    if (substr(strtolower($fqn), 0, strlen($prefix)) === strtolower($prefix) && !$def->isGlobal) {
+            foreach ($prefixes as $prefix) {
+                $definitions = $this->index->findWithPrefix($prefix);
+                foreach ($definitions as $def) {
+                    if (!$def->isGlobal) {
                         $list->items[] = CompletionItem::fromDefinition($def);
                     }
                 }
@@ -307,59 +310,71 @@ class CompletionProvider
                 }
             }
 
-            // Suggest global symbols that either
-            //  - start with the current namespace + prefix, if the Name node is not fully qualified
-            //  - start with just the prefix, if the Name node is fully qualified
-            foreach ($this->index->getDefinitions() as $fqn => $def) {
+            $completingDefinitions = [];
 
-                $fqnStartsWithPrefix = substr($fqn, 0, $prefixLen) === $prefix;
-
-                if (
-                    // Exclude methods, properties etc.
-                    $def->isGlobal
-                    && (
-                        !$prefix
-                        || (
-                            // Either not qualified, but a matching prefix with global fallback
-                            ($def->roamed && !$isQualified && $fqnStartsWithPrefix)
-                            // Or not in a namespace or a fully qualified name or AND matching the prefix
-                            || ((!$namespaceNode || $isFullyQualified) && $fqnStartsWithPrefix)
-                            // Or in a namespace, not fully qualified and matching the prefix + current namespace
-                            || (
-                                $namespaceNode
-                                && !$isFullyQualified
-                                && substr($fqn, 0, $namespacedPrefixLen) === $namespacedPrefix
-                            )
-                        )
-                    )
-                    // Only suggest classes for `new`
-                    && (!isset($creation) || $def->canBeInstantiated)
-                ) {
-                    $item = CompletionItem::fromDefinition($def);
-                    // Find the shortest name to reference the symbol
-                    if ($namespaceNode && ($alias = array_search($fqn, $aliases, true)) !== false) {
-                        // $alias is the name under which this definition is aliased in the current namespace
-                        $item->insertText = $alias;
-                    } else if ($namespaceNode && !($prefix && $isFullyQualified)) {
-                        // Insert the global FQN with leading backslash
-                        $item->insertText = '\\' . $fqn;
-                    } else {
-                        // Insert the FQN without leading backlash
-                        $item->insertText = $fqn;
-                    }
-                    // Don't insert the parenthesis for functions
-                    // TODO return a snippet and put the cursor inside
-                    if (substr($item->insertText, -2) === '()') {
-                        $item->insertText = substr($item->insertText, 0, -2);
-                    }
-                    $list->items[] = $item;
+            if (!$prefix) {
+                foreach ($this->index->getDefinitions() as $fqn => $def) {
+                    $completingDefinitions[$fqn] = $def;
                 }
+            } else {
+                if (!$namespaceNode) {
+                    foreach ($this->index->findWithPrefix($prefix) as $fqn => $def) {
+                        if ($isQualified && !$def->roamed) {
+                            continue;
+                        }
+
+                        $completingDefinitions[$fqn] = $def;
+                    }
+                } else if ($isFullyQualified) {
+                    foreach ($this->index->findWithPrefix($prefix) as $fqn => $def) {
+                        $completingDefinitions[$fqn] = $def;
+                    }
+                } else {
+                    foreach ($this->index->findWithPrefix($prefix) as $fqn => $def) {
+                        $completingDefinitions[$fqn] = $def;
+                    }
+                    foreach ($this->index->findWithPrefix($namespacedPrefix) as $fqn => $def) {
+                        $completingDefinitions[$fqn] = $def;
+                    }
+                }
+            }
+            $elapsed = microtime(true) - $start;
+            $this->client->window->logMessage(MessageType::INFO, "Finished searching in $elapsed seconds");
+            $start = microtime(true);
+
+            foreach ($completingDefinitions as $fqn => $def) {
+                if (
+                    !($def->isGlobal &&
+                    (!isset($creation) || $def->canBeInstantiated)) &&
+                    $def->symbolInformation->kind !== SymbolKind::CONSTANT
+                ) {
+                    continue;
+                }
+
+                $item = CompletionItem::fromDefinition($def);
+                // Find the shortest name to reference the symbol
+                if ($namespaceNode && ($alias = array_search($fqn, $aliases, true)) !== false) {
+                    // $alias is the name under which this definition is aliased in the current namespace
+                    $item->insertText = $alias;
+                } else if ($namespaceNode && !($prefix && $isFullyQualified)) {
+                    // Insert the global FQN with leading backslash
+                    $item->insertText = '\\' . $fqn;
+                } else {
+                    // Insert the FQN without leading backlash
+                    $item->insertText = $fqn;
+                }
+                // Don't insert the parenthesis for functions
+                // TODO return a snippet and put the cursor inside
+                if (substr($item->insertText, -2) === '()') {
+                    $item->insertText = substr($item->insertText, 0, -2);
+                }
+                $list->items[] = $item;
             }
 
             // If not a class instantiation, also suggest keywords
             if (!isset($creation)) {
                 foreach (self::KEYWORDS as $keyword) {
-                    if (substr($keyword, 0, $prefixLen) === $prefix) {
+                    if (strpos($keyword, $prefix) === 0) {
                         $item = new CompletionItem($keyword, CompletionItemKind::KEYWORD);
                         $item->insertText = $keyword;
                         $list->items[] = $item;

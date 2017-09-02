@@ -580,13 +580,13 @@ class CompletionTest extends TestCase
         )->wait();
         $this->assertEquals(new CompletionList([
             new CompletionItem(
-                'foo',
+                'bar',
                 CompletionItemKind::PROPERTY,
                 'mixed', // Type of the property
                 null
             ),
             new CompletionItem(
-                'bar',
+                'foo',
                 CompletionItemKind::PROPERTY,
                 'mixed', // Type of the property
                 null
@@ -616,25 +616,13 @@ class CompletionTest extends TestCase
         )->wait();
         $this->assertEquals(new CompletionList([
             new CompletionItem(
-                'testProperty',
-                CompletionItemKind::PROPERTY,
-                '\TestClass', // Type of the property
-                'Reprehenderit magna velit mollit ipsum do.'
-            ),
-            new CompletionItem(
-                'testMethod',
-                CompletionItemKind::METHOD,
-                '\TestClass', // Return type of the method
-                'Non culpa nostrud mollit esse sunt laboris in irure ullamco cupidatat amet.'
-            ),
-            new CompletionItem(
-                'foo',
+                'bar',
                 CompletionItemKind::PROPERTY,
                 'mixed', // Type of the property
                 null
             ),
             new CompletionItem(
-                'bar',
+                'foo',
                 CompletionItemKind::PROPERTY,
                 'mixed', // Type of the property
                 null
@@ -650,6 +638,18 @@ class CompletionTest extends TestCase
                 CompletionItemKind::METHOD,
                 'mixed', // Return type of the method
                 null
+            ),
+            new CompletionItem(
+                'testMethod',
+                CompletionItemKind::METHOD,
+                '\TestClass', // Return type of the method
+                'Non culpa nostrud mollit esse sunt laboris in irure ullamco cupidatat amet.'
+            ),
+            new CompletionItem(
+                'testProperty',
+                CompletionItemKind::PROPERTY,
+                '\TestClass', // Type of the property
+                'Reprehenderit magna velit mollit ipsum do.'
             )
         ], true), $items);
     }
@@ -662,22 +662,56 @@ class CompletionTest extends TestCase
             new TextDocumentIdentifier($completionUri),
             new Position(17, 23)
         )->wait();
-        $this->assertEquals(new CompletionList([
+
+        $results = [
             new CompletionItem(
                 'foo',
                 CompletionItemKind::METHOD,
                 '$this' // Return type of the method
             ),
             new CompletionItem(
-                'bar',
+                'qux',
                 CompletionItemKind::METHOD,
                 'mixed' // Return type of the method
             ),
             new CompletionItem(
-                'qux',
+                'bar',
                 CompletionItemKind::METHOD,
                 'mixed' // Return type of the method
             )
-        ], true), $items);
+        ];
+
+        usort($results, function ($item1, $item2) {
+            return strcmp($item1->label, $item2->label);
+        });
+        usort($items->items, function ($item1, $item2) {
+            return strcmp($item1->label, $item2->label);
+        });
+
+        $this->assertEquals(new CompletionList($results, true), $items);
+    }
+
+    public function testConstantInDefine()
+    {
+        $completionUri = pathToUri(__DIR__ . '/../../../fixtures/completion/constant_without_namespace.php');
+        $this->loader->open($completionUri, file_get_contents($completionUri));
+        $items = $this->textDocument->completion(
+            new TextDocumentIdentifier($completionUri),
+            new Position(2, 4)
+        )->wait();
+
+        $results = new CompletionList([
+            new CompletionItem(
+                'DEFINED_CONSTANT',
+                CompletionItemKind::VARIABLE,
+                'int',
+                null,
+                null,
+                null,
+                'DEFINED_CONSTANT'
+            )
+        ], true);
+
+        $this->assertEquals($results, $items);
     }
 }

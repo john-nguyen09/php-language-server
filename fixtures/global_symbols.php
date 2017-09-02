@@ -1,6 +1,6 @@
 <?php
 
-
+define('DEFINED_CONSTANT', 0);
 
 /**
  * Esse commodo excepteur pariatur Lorem est aute incididunt reprehenderit.
