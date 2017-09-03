@@ -338,9 +338,6 @@ class CompletionProvider
                     }
                 }
             }
-            $elapsed = microtime(true) - $start;
-            $this->client->window->logMessage(MessageType::INFO, "Finished searching in $elapsed seconds");
-            $start = microtime(true);
 
             foreach ($completingDefinitions as $fqn => $def) {
                 if (
