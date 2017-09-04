@@ -238,7 +238,6 @@ class CompletionProvider
             // Append :: operator to only get static members of all parents
             $prefixes = [];
             foreach ($this->expandParentFqns($fqns) as $prefix) {
-                $this->client->window->logMessage(MessageType::INFO, "prefix: $prefix");
                 $prefixes[] = $prefix . '::';
             }
 
