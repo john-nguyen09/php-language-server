@@ -118,6 +118,7 @@ class Indexer
             /** @var string[][] */
             $deps = [];
 
+            shuffle($uris);
             foreach ($uris as $uri) {
                 $packageName = getPackageName($uri, $this->composerJson);
                 if ($this->composerLock !== null && $packageName) {

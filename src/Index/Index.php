@@ -136,19 +136,29 @@ class Index implements ReadableIndex, \Serializable
     public function setDefinition(string $fqn, Definition $definition)
     {
         if (!empty($fqn)) {
-            $this->radixTrie->add($fqn, $definition);
+            $this->radixTrie->add($fqn);
         }
         $this->definitions[$fqn] = $definition;
         $this->emit('definition-added');
     }
-
+    
     public function findWithPrefix($prefix)
     {
         if (empty($prefix)) {
             return $this->definitions;
         }
 
-        return $this->getRadixTrie()->search($prefix);
+        $fqns = $this->radixTrie->search($prefix);
+        $definitions = [];
+
+        foreach ($fqns as $fqn => $ignored) {
+            if (!isset($this->definitions[$fqn])) {
+                continue;
+            }
+            $definitions[$fqn] = $this->definitions[$fqn];
+        }
+
+        return $definitions;
     }
 
     /**
@@ -232,6 +242,13 @@ class Index implements ReadableIndex, \Serializable
         foreach ($data as $prop => $val) {
             $this->$prop = $val;
         }
+
+        $this->radixTrie = new RadixTrie;
+        $fqns = array_keys($this->definitions);
+        shuffle($fqns);
+        foreach ($fqns as $fqn) {
+            $this->radixTrie->add($fqn);
+        }
     }
 
     /**
@@ -244,21 +261,7 @@ class Index implements ReadableIndex, \Serializable
             'definitions' => $this->definitions,
             'references' => $this->references,
             'complete' => $this->complete,
-            'staticComplete' => $this->staticComplete,
-            'radixTrie' => $this->radixTrie
+            'staticComplete' => $this->staticComplete
         ]);
-    }
-
-    protected function getRadixTrie()
-    {
-        if (!isset($this->radixTrie)) {
-            $this->radixTrie = new RadixTrie;
-
-            foreach ($this->getDefinitions() as $fqn => $def) {
-                $this->radixTrie->add($fqn, $def);
-            }
-        }
-
-        return $this->radixTrie;
     }
 }
