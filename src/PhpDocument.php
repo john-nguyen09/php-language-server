@@ -126,25 +126,36 @@ class PhpDocument
      */
     public function updateContent(string $content)
     {
-        // Unregister old definitions
-        if (isset($this->definitions)) {
-            foreach ($this->definitions as $fqn => $definition) {
-                $this->index->removeDefinition($fqn);
-            }
+        $treeAnalyzer = new TreeAnalyzer(
+            $this->parser,
+            $content,
+            $this->docBlockFactory,
+            $this->definitionResolver,
+            $this->uri
+        );
+
+        $newDefinitions = $treeAnalyzer->getDefinitions();
+        $newDefinitionFqns = array_keys(array_diff_key($newDefinitions, $this->definitions ?? []));
+        $deletedDefinitionFqns = array_keys(array_diff_key($this->definitions ?? [], $newDefinitions));
+
+        foreach ($deletedDefinitionFqns as $deletedFqn) {
+            $this->index->removeDefinition($deletedFqn);
         }
 
-        // Unregister old references
-        if (isset($this->referenceNodes)) {
-            foreach ($this->referenceNodes as $fqn => $node) {
-                $this->index->removeReferenceUri($fqn, $this->uri);
-            }
+        foreach ($newDefinitionFqns as $newFqn) {
+            $this->index->indexFqn($newFqn);
+        }
+
+        $newReferenceNodes = $treeAnalyzer->getReferenceNodes();
+        $removedReferenceFqns = array_keys(array_diff_key($this->referenceNodes ?? [], $newReferenceNodes));
+
+        foreach ($removedReferenceFqns as $removedReferenceFqn) {
+            $this->index->removeReferenceUri($removedReferenceFqn, $this->uri);
         }
 
         $this->referenceNodes = null;
         $this->definitions = null;
         $this->definitionNodes = null;
-
-        $treeAnalyzer = new TreeAnalyzer($this->parser, $content, $this->docBlockFactory, $this->definitionResolver, $this->uri);
 
         $this->diagnostics = $treeAnalyzer->getDiagnostics();
 

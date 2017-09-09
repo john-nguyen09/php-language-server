@@ -135,11 +135,23 @@ class Index implements ReadableIndex, \Serializable
      */
     public function setDefinition(string $fqn, Definition $definition)
     {
-        if (!empty($fqn)) {
-            $this->radixTrie->add($fqn);
-        }
         $this->definitions[$fqn] = $definition;
         $this->emit('definition-added');
+    }
+
+    /**
+     * Index a fully qualified name to make searching faster
+     *
+     * @param string $fqn
+     * @return void
+     */
+    public function indexFqn(string $fqn)
+    {
+        if (empty($fqn)) {
+            return;
+        }
+
+        $this->radixTrie->add($fqn);
     }
     
     public function findWithPrefix($prefix)
