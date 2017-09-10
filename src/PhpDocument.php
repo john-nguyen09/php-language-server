@@ -82,6 +82,13 @@ class PhpDocument
     private $diagnostics;
 
     /**
+     * Unix timestamp of time modified at the time of snapshotting
+     *
+     * @var int
+     */
+    private $lastIndexedModified;
+
+    /**
      * @param string $uri The URI of the document
      * @param string $content The content of the document
      * @param Index $index The Index to register definitions and references to
@@ -102,7 +109,28 @@ class PhpDocument
         $this->parser = $parser;
         $this->docBlockFactory = $docBlockFactory;
         $this->definitionResolver = $definitionResolver;
-        $this->updateContent($content);
+        $this->lastIndexedModified = 0;
+
+        $snapshot = $this->getSnapshot();
+
+        if ($snapshot !== null) {
+            $this->lastIndexedModified = $snapshot['lastModified'];
+        }
+
+        if ($this->isSnapshotValid()) {
+            $this->definitionNodes = $snapshot['definitionNodes'];
+            $this->definitions = $snapshot['definitions']?? [];
+            $this->referenceNodes = $snapshot['referenceNodes']?? [];
+            $this->diagnostics = $snapshot['diagnostics']?? [];
+
+            $this->reindex(
+                array_keys($this->definitions),
+                $this->definitions,
+                $this->referenceNodes
+            );
+        } else {
+            $this->updateContent($content);
+        }
     }
 
     /**
@@ -142,10 +170,6 @@ class PhpDocument
             $this->index->removeDefinition($deletedFqn);
         }
 
-        foreach ($newDefinitionFqns as $newFqn) {
-            $this->index->indexFqn($newFqn);
-        }
-
         $newReferenceNodes = $treeAnalyzer->getReferenceNodes();
         $removedReferenceFqns = array_keys(array_diff_key($this->referenceNodes ?? [], $newReferenceNodes));
 
@@ -165,16 +189,24 @@ class PhpDocument
 
         $this->referenceNodes = $treeAnalyzer->getReferenceNodes();
 
+        $this->sourceFileNode = $treeAnalyzer->getSourceFileNode();
+
+        $this->reindex($newDefinitionFqns, $this->definitions, $this->referenceNodes);
+    }
+
+    public function reindex($fqns, $definitions, $referenceNodes)
+    {
         foreach ($this->definitions as $fqn => $definition) {
             $this->index->setDefinition($fqn, $definition);
         }
 
-        // Register this document on the project for references
         foreach ($this->referenceNodes as $fqn => $nodes) {
             $this->index->addReferenceUri($fqn, $this->uri);
         }
-
-        $this->sourceFileNode = $treeAnalyzer->getSourceFileNode();
+        
+        foreach ($fqns as $fqn) {
+            $this->index->indexFqn($fqn);
+        }
     }
 
     /**
@@ -304,5 +336,65 @@ class PhpDocument
     public function isDefined(string $fqn): bool
     {
         return isset($this->definitions[$fqn]);
+    }
+
+    public function isSnapshotValid()
+    {
+        if (!file_exists($this->uri)) {
+            return true;
+        }
+
+        return $this->lastIndexedModified === filemtime($this->uri);
+    }
+
+    public function writeToSnapshot()
+    {
+        if ($this->isSnapshotValid()) {
+            return;
+        }
+
+        $serialized = serialize(array(
+            'definitions' => $this->definitions,
+            'referenceNodes' => $this->referenceNodes,
+            'diagnostics' => $this->diagnostics,
+            'definitionNodes' => $this->definitionNodes,
+            'lastModified' => filemtime($this->uri)
+        ));
+
+        $path = $this->createAndGetSnapshotPath();
+        $filename = md5($this->uri);
+
+        $file = fopen($path . '/' . $filename, 'w');
+        fwrite($file, $serialized);
+        fclose($file);
+    }
+    
+    public function getSnapshot()
+    {
+        $path = $this->createAndGetSnapshotPath();
+        $filename = md5($this->uri);
+
+        if (!file_exists($path . '/' . $filename)) {
+            return null;
+        }
+
+        return unserialize(file_get_contents($path . '/' . $filename));
+    }
+
+    private function createAndGetSnapshotPath()
+    {
+        if (strtoupper(substr(php_uname('s'), 0, 3)) === 'WIN') {
+            $path = getenv('LOCALAPPDATA') . '\\PHP Language Server\\snapshots\\';
+        } else if (getenv('XDG_CACHE_HOME')) {
+            $path = getenv('XDG_CACHE_HOME') . '/phpls/snapshots/';
+        } else {
+            $path = getenv('HOME') . '/.phpls/snapshots/';
+        }
+
+        if (!\file_exists($path)) {
+            mkdir($path, 0777, true);
+        }
+        
+        return $path;
     }
 }
