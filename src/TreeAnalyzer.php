@@ -40,13 +40,8 @@ class TreeAnalyzer
      * @param DefinitionResolver $definitionResolver
      * @param string $uri
      */
-    public function __construct(
-        PhpParser\Parser $parser,
-        string $content,
-        DocBlockFactory $docBlockFactory,
-        DefinitionResolver $definitionResolver,
-        string $uri
-    ) {
+    public function __construct(PhpParser\Parser $parser, string $content, DocBlockFactory $docBlockFactory, DefinitionResolver $definitionResolver, string $uri)
+    {
         $this->parser = $parser;
         $this->docBlockFactory = $docBlockFactory;
         $this->definitionResolver = $definitionResolver;
@@ -59,51 +54,39 @@ class TreeAnalyzer
 
     private function collectDefinitionsAndReferences(Node $sourceFileNode)
     {
-        $nodeQueue = [$sourceFileNode];
-        while (count($nodeQueue) > 0) {
-            $processingNode = array_shift($nodeQueue);
-            foreach ($processingNode::CHILD_NAMES as $name) {
-                $node = $processingNode->$name;
-    
-                if ($node === null) {
-                    continue;
-                }
-    
-                if (\is_array($node)) {
-                    foreach ($node as $child) {
-                        if ($child instanceof Node) {
-                            $this->update($child);
+        foreach ($sourceFileNode::CHILD_NAMES as $name) {
+            $node = $sourceFileNode->$name;
 
-                            $nodeQueue[] = $child;
-                        }
+            if ($node === null) {
+                continue;
+            }
+
+            if (\is_array($node)) {
+                foreach ($node as $child) {
+                    if ($child instanceof Node) {
+                        $this->update($child);
                     }
-                    continue;
                 }
-    
-                if ($node instanceof Node) {
-                    $this->update($node);
+                continue;
+            }
 
-                    $nodeQueue[] = $node;
-                }
-    
-                if (($error = PhpParser\DiagnosticsProvider::checkDiagnostics($node)) !== null) {
-                    $range = PhpParser\PositionUtilities::getRangeFromPosition(
-                        $error->start,
-                        $error->length,
-                        $this->sourceFileNode->fileContents
-                    );
-    
-                    $this->diagnostics[] = new Diagnostic(
-                        $error->message,
-                        new Range(
-                            new Position($range->start->line, $range->start->character),
-                            new Position($range->end->line, $range->start->character)
-                        ),
-                        null,
-                        DiagnosticSeverity::ERROR,
-                        'php'
-                    );
-                }
+            if ($node instanceof Node) {
+                $this->update($node);
+            }
+
+            if (($error = PhpParser\DiagnosticsProvider::checkDiagnostics($node)) !== null) {
+                $range = PhpParser\PositionUtilities::getRangeFromPosition($error->start, $error->length, $this->sourceFileNode->fileContents);
+
+                $this->diagnostics[] = new Diagnostic(
+                    $error->message,
+                    new Range(
+                        new Position($range->start->line, $range->start->character),
+                        new Position($range->end->line, $range->start->character)
+                    ),
+                    null,
+                    DiagnosticSeverity::ERROR,
+                    'php'
+                );
             }
         }
     }
@@ -169,6 +152,7 @@ class TreeAnalyzer
                 }
             }
         }
+        $this->collectDefinitionsAndReferences($node);
     }
 
     /**

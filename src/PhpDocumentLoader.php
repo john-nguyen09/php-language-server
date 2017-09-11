@@ -119,11 +119,6 @@ class PhpDocumentLoader
             } else {
                 $document = $this->create($uri, $content);
             }
-
-            if (!$this->isOpen($uri)) {
-                $document->writeToSnapshot();
-            }
-
             return $document;
         });
     }
