@@ -183,8 +183,8 @@ class CompletionProvider
                 $item = new CompletionItem;
                 $item->kind = CompletionItemKind::VARIABLE;
                 $item->label = '$' . $var->getName();
-                $item->documentation = $this->definitionResolver->getDocumentationFromNode($var);
-                $item->detail = (string)$this->definitionResolver->getTypeFromNode($var);
+                $item->documentation = $this->definitionResolver->getDocumentationFromNode($var, $doc->getUri());
+                $item->detail = (string)$this->definitionResolver->getTypeFromNode($var, $doc->getUri());
                 $item->textEdit = new TextEdit(
                     new Range($pos, $pos),
                     stripStringOverlap($doc->getRange(new Range(new Position(0, 0), $pos)), $item->label)
@@ -200,7 +200,10 @@ class CompletionProvider
 
             // Multiple prefixes for all possible types
             $fqns = FqnUtilities\getFqnsFromType(
-                $this->definitionResolver->resolveExpressionNodeToType($node->dereferencableExpression)
+                $this->definitionResolver->resolveExpressionNodeToType(
+                    $node->dereferencableExpression,
+                    $doc->getUri()
+                )
             );
 
             // Add the object access operator to only get members of all parents
@@ -232,7 +235,10 @@ class CompletionProvider
 
             // Resolve all possible types to FQNs
             $fqns = FqnUtilities\getFqnsFromType(
-                $classType = $this->definitionResolver->resolveExpressionNodeToType($scoped->scopeResolutionQualifier)
+                $classType = $this->definitionResolver->resolveExpressionNodeToType(
+                    $scoped->scopeResolutionQualifier,
+                    $doc->getUri()
+                )
             );
 
             // Append :: operator to only get static members of all parents

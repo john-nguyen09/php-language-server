@@ -233,7 +233,7 @@ class TextDocument
                     yield waitForEvent($this->index, 'complete');
                 }
                 if ($fqn === null) {
-                    $fqn = $this->definitionResolver->resolveReferenceNodeToFqn($node);
+                    $fqn = $this->definitionResolver->resolveReferenceNodeToFqn($node, $textDocument->uri);
                     if ($fqn === null) {
                         return [];
                     }
@@ -278,7 +278,7 @@ class TextDocument
                     $def = $this->index->getDefinition($fqn);
                 } else {
                     // Handle reference nodes
-                    $def = $this->definitionResolver->resolveReferenceNodeToDefinition($node);
+                    $def = $this->definitionResolver->resolveReferenceNodeToDefinition($node, $textDocument->uri);
                 }
                 // If no result was found and we are still indexing, try again after the index was updated
                 if ($def !== null || $this->index->isComplete()) {
@@ -293,6 +293,7 @@ class TextDocument
             ) {
                 return [];
             }
+
             return $def->symbolInformation->location;
         });
     }
@@ -320,7 +321,7 @@ class TextDocument
                     $def = $this->index->getDefinition($definedFqn);
                 } else {
                     // Get the definition for whatever node is under the cursor
-                    $def = $this->definitionResolver->resolveReferenceNodeToDefinition($node);
+                    $def = $this->definitionResolver->resolveReferenceNodeToDefinition($node, $textDocument->uri);
                 }
                 // If no result was found and we are still indexing, try again after the index was updated
                 if ($def !== null || $this->index->isComplete()) {
@@ -391,7 +392,7 @@ class TextDocument
                     $def = $this->index->getDefinition($fqn);
                 } else {
                     // Handle reference nodes
-                    $def = $this->definitionResolver->resolveReferenceNodeToDefinition($node);
+                    $def = $this->definitionResolver->resolveReferenceNodeToDefinition($node, $textDocument->uri);
                 }
                 // If no result was found and we are still indexing, try again after the index was updated
                 if ($def !== null || $this->index->isComplete()) {

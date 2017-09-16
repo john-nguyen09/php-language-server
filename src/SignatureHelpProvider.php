@@ -100,7 +100,8 @@ class SignatureHelpProvider
         if (!($node instanceof CallExpression)) {
             return new SignatureHelp;
         }
-        $def = $this->definitionResolver->resolveReferenceNodeToDefinition($node->callableExpression);
+        $def = $this->definitionResolver->resolveReferenceNodeToDefinition(
+            $node->callableExpression, $doc->getUri());
         if (!$def) {
             return new SignatureHelp;
         }

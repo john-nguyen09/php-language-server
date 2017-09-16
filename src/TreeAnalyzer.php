@@ -102,7 +102,11 @@ class TreeAnalyzer
         // Only index definitions with an FQN (no variables)
         if ($fqn !== null) {
             $this->definitionNodes[$fqn] = $node;
-            $this->definitions[$fqn] = $this->definitionResolver->createDefinitionFromNode($node, $fqn);
+            $this->definitions[$fqn] = $this->definitionResolver->createDefinitionFromNode(
+                $node,
+                $this->sourceFileNode->uri,
+                $fqn
+            );
         } else {
             $parent = $node->parent;
             if (!(
@@ -116,7 +120,7 @@ class TreeAnalyzer
                     ))
                 || ($parent instanceof Node\Statement\NamespaceDefinition && $parent->name !== null && $parent->name->getStart() === $node->getStart()))
             ) {
-                $fqn = $this->definitionResolver->resolveReferenceNodeToFqn($node);
+                $fqn = $this->definitionResolver->resolveReferenceNodeToFqn($node, $this->sourceFileNode->uri);
                 if ($fqn !== null) {
                     $this->addReference($fqn, $node);
 

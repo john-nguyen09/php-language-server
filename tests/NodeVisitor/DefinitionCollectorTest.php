@@ -78,7 +78,7 @@ class DefinitionCollectorTest extends TestCase
         $definitionResolver = new DefinitionResolver($index);
         $content = file_get_contents($path);
 
-        $treeAnalyzer = new TreeAnalyzer($parser, $content, $docBlockFactory, $definitionResolver, $uri);
+        $treeAnalyzer = new TreeAnalyzer($parser, $content, $docBlockFactory, $definitionResolver, $uri, $index);
         return $treeAnalyzer->getDefinitionNodes();
     }
 }

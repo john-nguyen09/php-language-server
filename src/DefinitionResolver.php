@@ -38,6 +38,8 @@ class DefinitionResolver
      */
     private $docBlockFactory;
 
+    private $importTables = [];
+
     /**
      * @param ReadableIndex $index
      */
@@ -90,7 +92,7 @@ class DefinitionResolver
      * @param Node $node
      * @return string|null
      */
-    public function getDocumentationFromNode($node)
+    public function getDocumentationFromNode($node, $uri)
     {
         // Any NamespaceDefinition comments likely apply to the file, not the declaration itself.
         if ($node instanceof Node\Statement\NamespaceDefinition) {
@@ -109,14 +111,14 @@ class DefinitionResolver
             $variableName = $node->getName();
 
             $functionLikeDeclaration = ParserHelpers\getFunctionLikeDeclarationFromParameter($node);
-            $docBlock = $this->getDocBlock($functionLikeDeclaration);
+            $docBlock = $this->getDocBlock($functionLikeDeclaration, $uri);
 
             $parameterDocBlockTag = $this->tryGetDocBlockTagForParameter($docBlock, $variableName);
             return $parameterDocBlockTag !== null ? $parameterDocBlockTag->getDescription()->render() : null;
         }
 
         // For everything else, get the doc block summary corresponding to the current node.
-        $docBlock = $this->getDocBlock($node);
+        $docBlock = $this->getDocBlock($node, $uri);
         if ($docBlock !== null) {
             // check whether we have a description, when true, add a new paragraph
             // with the description
@@ -135,17 +137,24 @@ class DefinitionResolver
      * Gets Doc Block with resolved names for a Node
      *
      * @param Node $node
+     * @param string $uri
      * @return DocBlock|null
      */
-    private function getDocBlock(Node $node)
+    private function getDocBlock(Node $node, string $uri)
     {
-        // TODO make more efficient (caching, ensure import table is in right format to begin with)
-        $docCommentText = $node->getDocCommentText();
-        if ($docCommentText !== null) {
+        if (!isset($this->importTables[$uri])) {
             list($namespaceImportTable,,) = $node->getImportTablesForCurrentScope();
             foreach ($namespaceImportTable as $alias => $name) {
                 $namespaceImportTable[$alias] = (string)$name;
             }
+
+            $this->importTables[$uri] = $namespaceImportTable;
+        }
+        $namespaceImportTable = $this->importTables[$uri];
+
+        // TODO make more efficient (caching, ensure import table is in right format to begin with)
+        $docCommentText = $node->getDocCommentText();
+        if ($docCommentText !== null) {
             $namespaceDefinition = $node->getNamespaceDefinition();
             if ($namespaceDefinition !== null && $namespaceDefinition->name !== null) {
                 $namespaceName = (string)$namespaceDefinition->name->getNamespacedName();
@@ -169,10 +178,11 @@ class DefinitionResolver
      * Create a Definition for a definition node
      *
      * @param Node $node
+     * @param string $uri
      * @param string $fqn
      * @return Definition
      */
-    public function createDefinitionFromNode(Node $node, string $fqn = null): Definition
+    public function createDefinitionFromNode(Node $node, string $uri, string $fqn = null): Definition
     {
         $def = new Definition;
         $def->fqn = $fqn;
@@ -233,9 +243,9 @@ class DefinitionResolver
         $def->symbolInformation = SymbolInformation::fromNode($node, $fqn);
 
         if ($def->symbolInformation !== null) {
-            $def->type = $this->getTypeFromNode($node);
+            $def->type = $this->getTypeFromNode($node, $uri);
             $def->declarationLine = $this->getDeclarationLineFromNode($node);
-            $def->documentation = $this->getDocumentationFromNode($node);
+            $def->documentation = $this->getDocumentationFromNode($node, $uri);
         }
 
         $def->parameters = [];
@@ -247,7 +257,7 @@ class DefinitionResolver
             foreach ($node->parameters->getElements() as $param) {
                 $def->parameters[] = new ParameterInformation(
                     $this->getDeclarationLineFromNode($param),
-                    $this->getDocumentationFromNode($param)
+                    $this->getDocumentationFromNode($param, $uri)
                 );
             }
         }
@@ -259,9 +269,10 @@ class DefinitionResolver
      * Given any node, returns the Definition object of the symbol that is referenced
      *
      * @param Node $node Any reference node
+     * @param string $uri
      * @return Definition|null
      */
-    public function resolveReferenceNodeToDefinition(Node $node)
+    public function resolveReferenceNodeToDefinition(Node $node, string $uri)
     {
         $parent = $node->parent;
         // Variables are not indexed globally, as they stay in the file scope anyway.
@@ -279,11 +290,11 @@ class DefinitionResolver
             if ($defNode === null) {
                 return null;
             }
-            return $this->createDefinitionFromNode($defNode);
+            return $this->createDefinitionFromNode($defNode, $uri);
         }
         // Other references are references to a global symbol that have an FQN
         // Find out the FQN
-        $fqn = $this->resolveReferenceNodeToFqn($node);
+        $fqn = $this->resolveReferenceNodeToFqn($node, $uri);
         if ($fqn === null) {
             return null;
         }
@@ -300,15 +311,16 @@ class DefinitionResolver
      * Returns null if the FQN could not be resolved or the reference node references a variable
      *
      * @param Node $node
+     * @param string $uri
      * @return string|null
      */
-    public function resolveReferenceNodeToFqn(Node $node)
+    public function resolveReferenceNodeToFqn(Node $node, string $uri)
     {
         // TODO all name tokens should be a part of a node
         if ($node instanceof Node\QualifiedName) {
             return $this->resolveQualifiedNameNodeToFqn($node);
         } else if ($node instanceof Node\Expression\MemberAccessExpression) {
-            return $this->resolveMemberAccessExpressionNodeToFqn($node);
+            return $this->resolveMemberAccessExpressionNodeToFqn($node, $uri);
         } else if (ParserHelpers\isConstantFetch($node)) {
             return (string)($node->getNamespacedName());
         } else if (
@@ -316,12 +328,12 @@ class DefinitionResolver
             $node instanceof Node\Expression\ScopedPropertyAccessExpression
             && !($node->memberName instanceof Node\Expression\Variable)
         ) {
-            return $this->resolveScopedPropertyAccessExpressionNodeToFqn($node);
+            return $this->resolveScopedPropertyAccessExpressionNodeToFqn($node, $uri);
         } else if (
             // A\B::$c - static property access expression
             $node->parent instanceof Node\Expression\ScopedPropertyAccessExpression
         ) {
-            return $this->resolveScopedPropertyAccessExpressionNodeToFqn($node->parent);
+            return $this->resolveScopedPropertyAccessExpressionNodeToFqn($node->parent, $uri);
         }
 
         return null;
@@ -374,14 +386,16 @@ class DefinitionResolver
         return $name;
     }
 
-    private function resolveMemberAccessExpressionNodeToFqn(Node\Expression\MemberAccessExpression $access)
-    {
+    private function resolveMemberAccessExpressionNodeToFqn(
+        Node\Expression\MemberAccessExpression $access,
+        string $uri
+    ) {
         if ($access->memberName instanceof Node\Expression) {
             // Cannot get definition if right-hand side is expression
             return null;
         }
         // Get the type of the left-hand expression
-        $varType = $this->resolveExpressionNodeToType($access->dereferencableExpression);
+        $varType = $this->resolveExpressionNodeToType($access->dereferencableExpression, $uri);
 
         if ($varType instanceof Types\Compound) {
             // For compound types, use the first FQN we find
@@ -441,10 +455,12 @@ class DefinitionResolver
         return $classFqn . $memberSuffix;
     }
 
-    private function resolveScopedPropertyAccessExpressionNodeToFqn(Node\Expression\ScopedPropertyAccessExpression $scoped)
-    {
+    private function resolveScopedPropertyAccessExpressionNodeToFqn(
+        Node\Expression\ScopedPropertyAccessExpression $scoped,
+        string $uri
+    ) {
         if ($scoped->scopeResolutionQualifier instanceof Node\Expression\Variable) {
-            $varType = $this->getTypeFromNode($scoped->scopeResolutionQualifier);
+            $varType = $this->getTypeFromNode($scoped->scopeResolutionQualifier, $uri);
             if ($varType === null) {
                 return null;
             }
@@ -572,9 +588,10 @@ class DefinitionResolver
      * If the type could not be resolved, returns Types\Mixed.
      *
      * @param Node\Expression $expr
+     * @param string $uri
      * @return \phpDocumentor\Reflection\Type|null
      */
-    public function resolveExpressionNodeToType($expr)
+    public function resolveExpressionNodeToType($expr, string $uri)
     {
         // PARENTHESIZED EXPRESSION
         // Retrieve inner expression from parenthesized expression
@@ -598,10 +615,10 @@ class DefinitionResolver
             // Find variable definition (parameter or assignment expression)
             $defNode = $this->resolveVariableToNode($expr);
             if ($defNode instanceof Node\Expression\AssignmentExpression || $defNode instanceof Node\UseVariableName) {
-                return $this->resolveExpressionNodeToType($defNode);
+                return $this->resolveExpressionNodeToType($defNode, $uri);
             }
             if ($defNode instanceof Node\Parameter) {
-                return $this->getTypeFromNode($defNode);
+                return $this->getTypeFromNode($defNode, $uri);
             }
         }
 
@@ -658,7 +675,7 @@ class DefinitionResolver
             $expr->callableExpression instanceof Node\Expression\MemberAccessExpression ||
             $expr->callableExpression instanceof Node\Expression\ScopedPropertyAccessExpression)
         ) {
-            return $this->resolveExpressionNodeToType($expr->callableExpression);
+            return $this->resolveExpressionNodeToType($expr->callableExpression, $uri);
         }
 
         // MEMBER ACCESS EXPRESSION
@@ -669,7 +686,7 @@ class DefinitionResolver
             $var = $expr->dereferencableExpression;
 
            // Resolve object
-            $objType = $this->resolveExpressionNodeToType($var);
+            $objType = $this->resolveExpressionNodeToType($var, $uri);
             if (!($objType instanceof Types\Compound)) {
                 $objType = new Types\Compound([$objType]);
             }
@@ -734,13 +751,13 @@ class DefinitionResolver
         // CLONE EXPRESSION
         //   clone($a) => resolves to the type of $a
         if ($expr instanceof Node\Expression\CloneExpression) {
-            return $this->resolveExpressionNodeToType($expr->expression);
+            return $this->resolveExpressionNodeToType($expr->expression, $uri);
         }
 
         // ASSIGNMENT EXPRESSION
         //   $a = $myExpression => resolves to the type of the right-hand operand
         if ($expr instanceof Node\Expression\AssignmentExpression) {
-            return $this->resolveExpressionNodeToType($expr->rightOperand);
+            return $this->resolveExpressionNodeToType($expr->rightOperand, $uri);
         }
 
         // TERNARY EXPRESSION
@@ -750,14 +767,14 @@ class DefinitionResolver
             // ?:
             if ($expr->ifExpression === null) {
                 return new Types\Compound([
-                    $this->resolveExpressionNodeToType($expr->condition), // TODO: why?
-                    $this->resolveExpressionNodeToType($expr->elseExpression)
+                    $this->resolveExpressionNodeToType($expr->condition, $uri), // TODO: why?
+                    $this->resolveExpressionNodeToType($expr->elseExpression, $uri)
                 ]);
             }
             // Ternary is a compound of the two possible values
             return new Types\Compound([
-                $this->resolveExpressionNodeToType($expr->ifExpression),
-                $this->resolveExpressionNodeToType($expr->elseExpression)
+                $this->resolveExpressionNodeToType($expr->ifExpression, $uri),
+                $this->resolveExpressionNodeToType($expr->elseExpression, $uri)
             ]);
         }
 
@@ -766,8 +783,8 @@ class DefinitionResolver
         if ($expr instanceof Node\Expression\BinaryExpression && $expr->operator->kind === PhpParser\TokenKind::QuestionQuestionToken) {
             // ?? operator
             return new Types\Compound([
-                $this->resolveExpressionNodeToType($expr->leftOperand),
-                $this->resolveExpressionNodeToType($expr->rightOperand)
+                $this->resolveExpressionNodeToType($expr->leftOperand, $uri),
+                $this->resolveExpressionNodeToType($expr->rightOperand, $uri)
             ]);
         }
 
@@ -825,8 +842,8 @@ class DefinitionResolver
             )
         ) {
             if (
-                $this->resolveExpressionNodeToType($expr->leftOperand) instanceof Types\Integer
-                && $this->resolveExpressionNodeToType($expr->rightOperand) instanceof Types\Integer
+                $this->resolveExpressionNodeToType($expr->leftOperand, $uri) instanceof Types\Integer
+                && $this->resolveExpressionNodeToType($expr->rightOperand, $uri) instanceof Types\Integer
             ) {
                 return new Types\Integer;
             }
@@ -877,8 +894,9 @@ class DefinitionResolver
             $keyTypes = [];
             if ($expr->arrayElements !== null) {
                 foreach ($expr->arrayElements->getElements() as $item) {
-                    $valueTypes[] = $this->resolveExpressionNodeToType($item->elementValue);
-                    $keyTypes[] = $item->elementKey ? $this->resolveExpressionNodeToType($item->elementKey) : new Types\Integer;
+                    $valueTypes[] = $this->resolveExpressionNodeToType($item->elementValue, $uri);
+                    $keyTypes[] = $item->elementKey ?
+                        $this->resolveExpressionNodeToType($item->elementKey, $uri) : new Types\Integer;
                 }
             }
             $valueTypes = array_unique($keyTypes);
@@ -904,7 +922,7 @@ class DefinitionResolver
         // $myArray[3]
         // $myArray{"hello"}
         if ($expr instanceof Node\Expression\SubscriptExpression) {
-            $varType = $this->resolveExpressionNodeToType($expr->postfixExpression);
+            $varType = $this->resolveExpressionNodeToType($expr->postfixExpression, $uri);
             if (!($varType instanceof Types\Array_)) {
                 return new Types\Mixed;
             }
@@ -980,14 +998,18 @@ class DefinitionResolver
      * Returns null if the node does not have a type.
      *
      * @param Node $node
+     * @param string $uri
      * @return \phpDocumentor\Reflection\Type|null
      */
-    public function getTypeFromNode($node)
+    public function getTypeFromNode($node, $uri)
     {
         if (ParserHelpers\isConstDefineExpression($node)) {
             // constants with define() like
             // define('TEST_DEFINE_CONSTANT', false);
-            return $this->resolveExpressionNodeToType($node->argumentExpressionList->children[2]->expression);
+            return $this->resolveExpressionNodeToType(
+                $node->argumentExpressionList->children[2]->expression,
+                $uri
+            );
         }
 
         // PARAMETERS
@@ -1003,7 +1025,7 @@ class DefinitionResolver
             //  function foo($a)
             $functionLikeDeclaration = ParserHelpers\getFunctionLikeDeclarationFromParameter($node);
             $variableName = $node->getName();
-            $docBlock = $this->getDocBlock($functionLikeDeclaration);
+            $docBlock = $this->getDocBlock($functionLikeDeclaration, $uri);
 
             $parameterDocBlockTag = $this->tryGetDocBlockTagForParameter($docBlock, $variableName);
             if ($parameterDocBlockTag !== null && ($type = $parameterDocBlockTag->getType())) {
@@ -1023,7 +1045,7 @@ class DefinitionResolver
             }
             // function foo($a = 3)
             if ($node->default !== null) {
-                $defaultType = $this->resolveExpressionNodeToType($node->default);
+                $defaultType = $this->resolveExpressionNodeToType($node->default, $uri);
                 if (isset($type) && !is_a($type, get_class($defaultType))) {
                     // TODO - verify it is worth creating a compound type
                     return new Types\Compound([$type, $defaultType]);
@@ -1040,7 +1062,7 @@ class DefinitionResolver
         //   3. TODO: infer from return statements
         if (ParserHelpers\isFunctionLike($node)) {
             // Functions/methods
-            $docBlock = $this->getDocBlock($node);
+            $docBlock = $this->getDocBlock($node, $uri);
             if (
                 $docBlock !== null
                 && !empty($returnTags = $docBlock->getTagsByName('return'))
@@ -1074,7 +1096,7 @@ class DefinitionResolver
             // Property, constant or variable
             // Use @var tag
             if (
-                ($docBlock = $this->getDocBlock($declarationNode))
+                ($docBlock = $this->getDocBlock($declarationNode, $uri))
                 && !empty($varTags = $docBlock->getTagsByName('var'))
                 && ($type = $varTags[0]->getType())
             ) {
@@ -1085,12 +1107,12 @@ class DefinitionResolver
             if ($declarationNode instanceof Node\PropertyDeclaration) {
                 // TODO should have default
                 if (isset($node->parent->rightOperand)) {
-                    return $this->resolveExpressionNodeToType($node->parent->rightOperand);
+                    return $this->resolveExpressionNodeToType($node->parent->rightOperand, $uri);
                 }
             } else if ($node instanceof Node\ConstElement) {
-                return $this->resolveExpressionNodeToType($node->assignment);
+                return $this->resolveExpressionNodeToType($node->assignment, $uri);
             } else if ($node instanceof Node\Expression\AssignmentExpression) {
-                return $this->resolveExpressionNodeToType($node->rightOperand);
+                return $this->resolveExpressionNodeToType($node->rightOperand, $uri);
             }
             // TODO: read @property tags of class
             // TODO: Try to infer the type from default value / constant value
