@@ -449,6 +449,11 @@ class CompletionProvider
         if ($level && ParserHelpers\isFunctionLike($level) && $level->parameters !== null) {
             foreach ($level->parameters->getValues() as $param) {
                 $paramName = $param->getName();
+
+                if (empty($paramName)) {
+                    continue;
+                }
+
                 if (empty($namePrefix) || strpos($paramName, $namePrefix) !== false) {
                     $vars[$paramName] = $param;
                 }

@@ -31,7 +31,7 @@ class DefinitionResolverTest extends TestCase
 
         $index = new Index;
         $definitionResolver = new DefinitionResolver($index);
-        $type = $definitionResolver->getTypeFromNode($sourceFileNode->statementList[1]->expression);
+        $type = $definitionResolver->getTypeFromNode($sourceFileNode->statementList[1]->expression, $doc->getUri());
 
         $this->assertInstanceOf(\phpDocumentor\Reflection\Types\Boolean::class, $type);
     }

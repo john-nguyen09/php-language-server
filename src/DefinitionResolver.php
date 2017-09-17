@@ -7,6 +7,7 @@ use LanguageServer\Index\ReadableIndex;
 use LanguageServer\Protocol\SymbolInformation;
 use LanguageServer\Protocol\ParameterInformation;
 use Microsoft\PhpParser;
+use Microsoft\PhpParser\ResolvedName;
 use Microsoft\PhpParser\Node;
 use Microsoft\PhpParser\Node\Expression\AnonymousFunctionCreationExpression;
 use Microsoft\PhpParser\Node\MethodDeclaration;
@@ -133,6 +134,15 @@ class DefinitionResolver
         return null;
     }
 
+    private function getImportTableForUri(Node $node, string $uri)
+    {
+        if (!isset($this->importTables[$uri])) {
+            $this->importTables[$uri] = $node->getImportTablesForCurrentScope();
+        }
+
+        return $this->importTables[$uri];
+    }
+
     /**
      * Gets Doc Block with resolved names for a Node
      *
@@ -142,15 +152,10 @@ class DefinitionResolver
      */
     private function getDocBlock(Node $node, string $uri)
     {
-        if (!isset($this->importTables[$uri])) {
-            list($namespaceImportTable,,) = $node->getImportTablesForCurrentScope();
-            foreach ($namespaceImportTable as $alias => $name) {
-                $namespaceImportTable[$alias] = (string)$name;
-            }
-
-            $this->importTables[$uri] = $namespaceImportTable;
+        list($namespaceImportTable,,) = $this->getImportTableForUri($node, $uri);
+        foreach ($namespaceImportTable as $alias => $fqn) {
+            $namespaceImportTable[$alias] = (string)$fqn;
         }
-        $namespaceImportTable = $this->importTables[$uri];
 
         // TODO make more efficient (caching, ensure import table is in right format to begin with)
         $docCommentText = $node->getDocCommentText();
@@ -318,7 +323,7 @@ class DefinitionResolver
     {
         // TODO all name tokens should be a part of a node
         if ($node instanceof Node\QualifiedName) {
-            return $this->resolveQualifiedNameNodeToFqn($node);
+            return $this->resolveQualifiedNameNodeToFqn($node, $uri);
         } else if ($node instanceof Node\Expression\MemberAccessExpression) {
             return $this->resolveMemberAccessExpressionNodeToFqn($node, $uri);
         } else if (ParserHelpers\isConstantFetch($node)) {
@@ -339,7 +344,7 @@ class DefinitionResolver
         return null;
     }
 
-    private function resolveQualifiedNameNodeToFqn(Node\QualifiedName $node)
+    private function resolveQualifiedNameNodeToFqn(Node\QualifiedName $node, string $uri)
     {
         $parent = $node->parent;
 
@@ -378,12 +383,133 @@ class DefinitionResolver
         }
 
         // For extends, implements, type hints and classes of classes of static calls use the name directly
-        $name = (string) ($node->getResolvedName() ?? $node->getNamespacedName());
+        $name = (string) ($this->getResolvedNameForNode($node, $uri) ?? $node->getNamespacedName());
 
         if ($node->parent instanceof Node\Expression\CallExpression) {
             $name .= '()';
         }
         return $name;
+    }
+
+    /**
+     * A copy of Node\QualifiedName::getResolvedName. This is due to PHP Parser will try to
+     * re-calculate the import for every single node even though in the same file
+     * That is why we want to have a copy but use temp cache
+     *
+     * @param Node\QualifiedName $name
+     * @param string $uri
+     * @return null|ResolvedName
+     */
+    private function getResolvedNameForNode(Node\QualifiedName $name, string $uri)
+    {
+        // Name resolution not applicable to constructs that define symbol names or aliases.
+        if (($name->parent instanceof Node\Statement\NamespaceDefinition && $name->parent->name->getStart() === $name->getStart()) ||
+            $name->parent instanceof Node\Statement\NamespaceUseDeclaration ||
+            $name->parent instanceof Node\NamespaceUseClause ||
+            $name->parent instanceof Node\NamespaceUseGroupClause ||
+            $name->parent->parent instanceof Node\TraitUseClause ||
+            $name->parent instanceof Node\TraitSelectOrAliasClause ||
+            ($name->parent instanceof TraitSelectOrAliasClause &&
+            ($name->parent->asOrInsteadOfKeyword == null || $name->parent->asOrInsteadOfKeyword->kind === TokenKind::AsKeyword))
+        ) {
+            return null;
+        }
+
+        if (array_search($lowerText = strtolower($name->getText()), ["self", "static", "parent"]) !== false) {
+            return $lowerText;
+        }
+
+        // FULLY QUALIFIED NAMES
+        // - resolve to the name without leading namespace separator.
+        if ($name->isFullyQualifiedName()) {
+            return ResolvedName::buildName($name->getNameParts(), $name->getFileContents());
+        }
+
+        // RELATIVE NAMES
+        // - resolve to the name with namespace replaced by the current namespace.
+        // - if current namespace is global, strip leading namespace\ prefix.
+        if ($name->isRelativeName()) {
+            return $name->getNamespacedName();
+        }
+
+        list($namespaceImportTable, $functionImportTable, $constImportTable) =
+            $this->getImportTableForUri($name, $uri);
+
+        // QUALIFIED NAMES
+        // - first segment of the name is translated according to the current class/namespace import table.
+        // - If no import rule applies, the current namespace is prepended to the name.
+        if ($name->isQualifiedName()) {
+            return $this->tryResolveFromImportTableForNode(
+                $name, $namespaceImportTable
+            ) ?? $name->getNamespacedName();
+        }
+
+        // UNQUALIFIED NAMES
+        // - translated according to the current import table for the respective symbol type.
+        //   (class-like => namespace import table, constant => const import table, function => function import table)
+        // - if no import rule applies:
+        //   - all symbol types: if current namespace is global, resolve to global namespace.
+        //   - class-like symbols: resolve from current namespace.
+        //   - function or const: resolved at runtime (from current namespace, with fallback to global namespace).
+        if ($this->isConstantForNode($name)) {
+            $resolvedName = $this->tryResolveFromImportTableForNode($name, $constImportTable, true);
+            $namespaceDefinition = $name->getNamespaceDefinition();
+            if ($namespaceDefinition !== null && $namespaceDefinition->name === null) {
+                $resolvedName = $resolvedName ?? ResolvedName::buildName(
+                    $name->getNameParts(),
+                    $name->getFileContents()
+                );
+            }
+            return $resolvedName;
+        } elseif ($name->parent instanceof CallExpression) {
+            $resolvedName = $this->tryResolveFromImportTableForNode($name, $functionImportTable);
+            if (
+                ($namespaceDefinition = $name->getNamespaceDefinition()) === null ||
+                $namespaceDefinition->name === null
+            ) {
+                $resolvedName = $resolvedName ?? ResolvedName::buildName(
+                    $name->getNameParts(),
+                    $name->getFileContents()
+                );
+            }
+            return $resolvedName;
+        }
+
+        return $this->tryResolveFromImportTableForNode($name, $namespaceImportTable) ?? $name->getNamespacedName();
+    }
+
+    private function isConstantForNode(Node\QualifiedName $name) : bool
+    {
+        return
+            ($name->parent instanceof Node\Statement\ExpressionStatement || $name->parent instanceof Expression) &&
+            !(
+                $name->parent instanceof Node\Expression\MemberAccessExpression || $name->parent instanceof CallExpression ||
+                $name->parent instanceof ObjectCreationExpression ||
+                $name->parent instanceof Node\Expression\ScopedPropertyAccessExpression || $name->parent instanceof AnonymousFunctionCreationExpression ||
+                ($name->parent instanceof Node\Expression\BinaryExpression && $name->parent->operator->kind === TokenKind::InstanceOfKeyword)
+            );
+    }
+
+        /**
+     * @param ResolvedName[] $importTable
+     * @param bool $isCaseSensitive
+     * @return null
+     */
+    private function tryResolveFromImportTableForNode(
+        Node\QualifiedName $name,
+        $importTable,
+        bool $isCaseSensitive = false
+    ) {
+        $content = $name->getFileContents();
+        $index = $name->getNameParts()[0]->getText($content);
+        if (isset($importTable[$index])) {
+            $resolvedName = $importTable[$index];
+            $resolvedName->addNameParts(\array_slice($name->getNameParts(), 1), $content);
+
+            return $resolvedName;
+        }
+
+        return null;
     }
 
     private function resolveMemberAccessExpressionNodeToFqn(
