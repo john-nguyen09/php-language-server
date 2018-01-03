@@ -17,7 +17,9 @@ use LanguageServer\Protocol\{
     Position,
     CompletionList,
     CompletionItem,
-    CompletionItemKind
+    CompletionItemKind,
+    CompletionContext,
+    CompletionTriggerKind
 };
 use function LanguageServer\pathToUri;
 
@@ -464,6 +466,41 @@ class CompletionTest extends TestCase
         ], true), $items);
     }
 
+    public function testHtmlPrefixShouldNotTriggerCompletion()
+    {
+        $completionUri = pathToUri(__DIR__ . '/../../../fixtures/completion/html_no_completion.php');
+        $this->loader->open($completionUri, file_get_contents($completionUri));
+        $items = $this->textDocument->completion(
+            new TextDocumentIdentifier($completionUri),
+            new Position(0, 1),
+            new CompletionContext(CompletionTriggerKind::TRIGGER_CHARACTER, '>')
+        )->wait();
+        $this->assertEquals(new CompletionList([], true), $items);
+    }
+
+    public function testHtmlPrefixShouldTriggerCompletionIfManuallyInvoked()
+    {
+        $completionUri = pathToUri(__DIR__ . '/../../../fixtures/completion/html_no_completion.php');
+        $this->loader->open($completionUri, file_get_contents($completionUri));
+        $items = $this->textDocument->completion(
+            new TextDocumentIdentifier($completionUri),
+            new Position(0, 1),
+            new CompletionContext(CompletionTriggerKind::INVOKED)
+        )->wait();
+        $this->assertEquals(new CompletionList([
+            new CompletionItem(
+                '<?php',
+                CompletionItemKind::KEYWORD,
+                null,
+                null,
+                null,
+                null,
+                null,
+                new TextEdit(new Range(new Position(0, 1), new Position(0, 1)), '?php')
+            )
+        ], true), $items);
+    }
+
     public function testNamespace()
     {
         $completionUri = pathToUri(__DIR__ . '/../../../fixtures/completion/namespace.php');
@@ -515,6 +552,161 @@ class CompletionTest extends TestCase
                 new TextEdit(new Range(new Position(4, 8), new Position(4, 8)), 'c')
             )
         ], true), $items);
+    }
+
+    /**
+     * @dataProvider foreachProvider
+     */
+    public function testForeach(Position $position, array $expectedItems)
+    {
+        $completionUri = pathToUri(__DIR__ . '/../../../fixtures/completion/foreach.php');
+        $this->loader->open($completionUri, file_get_contents($completionUri));
+        $items = $this->textDocument->completion(
+            new TextDocumentIdentifier($completionUri),
+            $position
+        )->wait();
+        $this->assertCompletionsListSubset(new CompletionList($expectedItems, true), $items);
+    }
+
+    public function foreachProvider(): array
+    {
+        return [
+            'foreach value' => [
+                new Position(18, 6),
+                [
+                    new CompletionItem(
+                        '$value',
+                        CompletionItemKind::VARIABLE,
+                        '\\Foo\\Bar',
+                        null,
+                        null,
+                        null,
+                        null,
+                        new TextEdit(new Range(new Position(18, 6), new Position(18, 6)), 'alue')
+                    ),
+                ]
+            ],
+            'foreach value resolved' => [
+                new Position(19, 12),
+                [
+                    new CompletionItem(
+                        'foo',
+                        CompletionItemKind::PROPERTY,
+                        'mixed'
+                    ),
+                    new CompletionItem(
+                        'test',
+                        CompletionItemKind::METHOD,
+                        '\\Foo\\Bar[]'
+                    ),
+                ]
+            ],
+            'array creation with multiple objects' => [
+                new Position(23, 5),
+                [
+                    new CompletionItem(
+                        '$value',
+                        CompletionItemKind::VARIABLE,
+                        '\\Foo\\Bar|\\stdClass',
+                        null,
+                        null,
+                        null,
+                        null,
+                        new TextEdit(new Range(new Position(23, 5), new Position(23, 5)), 'value')
+                    ),
+                    new CompletionItem(
+                        '$key',
+                        CompletionItemKind::VARIABLE,
+                        'int',
+                        null,
+                        null,
+                        null,
+                        null,
+                        new TextEdit(new Range(new Position(23, 5), new Position(23, 5)), 'key')
+                    ),
+                ]
+            ],
+            'array creation with string/int keys and object values' => [
+                new Position(27, 5),
+                [
+                    new CompletionItem(
+                        '$value',
+                        CompletionItemKind::VARIABLE,
+                        '\\Foo\\Bar',
+                        null,
+                        null,
+                        null,
+                        null,
+                        new TextEdit(new Range(new Position(27, 5), new Position(27, 5)), 'value')
+                    ),
+                    new CompletionItem(
+                        '$key',
+                        CompletionItemKind::VARIABLE,
+                        'string|int',
+                        null,
+                        null,
+                        null,
+                        null,
+                        new TextEdit(new Range(new Position(27, 5), new Position(27, 5)), 'key')
+                    ),
+                ]
+            ],
+            'array creation with only string keys' => [
+                new Position(31, 5),
+                [
+                    new CompletionItem(
+                        '$value',
+                        CompletionItemKind::VARIABLE,
+                        '\\Foo\\Bar',
+                        null,
+                        null,
+                        null,
+                        null,
+                        new TextEdit(new Range(new Position(31, 5), new Position(31, 5)), 'value')
+                    ),
+                    new CompletionItem(
+                        '$key',
+                        CompletionItemKind::VARIABLE,
+                        'string',
+                        null,
+                        null,
+                        null,
+                        null,
+                        new TextEdit(new Range(new Position(31, 5), new Position(31, 5)), 'key')
+                    ),
+                ]
+            ],
+            'foreach function call' => [
+                new Position(35, 5),
+                [
+                    new CompletionItem(
+                        '$value',
+                        CompletionItemKind::VARIABLE,
+                        '\\Foo\\Bar',
+                        null,
+                        null,
+                        null,
+                        null,
+                        new TextEdit(new Range(new Position(35, 5), new Position(35, 5)), 'value')
+                    ),
+                ]
+            ],
+            'foreach unknown type' => [
+                new Position(39, 10),
+                [
+                    new CompletionItem(
+                        '$unknown',
+                        CompletionItemKind::VARIABLE,
+                        'mixed',
+                        null,
+                        null,
+                        null,
+                        null,
+                        new TextEdit(new Range(new Position(39, 10), new Position(39, 10)), 'wn')
+                    ),
+                ]
+            ],
+        ];
     }
 
     public function testMethodReturnType()
@@ -605,7 +797,7 @@ class CompletionTest extends TestCase
             )
         ], true), $items);
     }
-    
+
     public function testThisWithPrefix()
     {
         $completionUri = pathToUri(__DIR__ . '/../../../fixtures/completion/this_with_prefix.php');

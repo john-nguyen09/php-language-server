@@ -4,7 +4,7 @@
         "A": {
             "fqn": "A",
             "extends": [],
-            "isGlobal": true,
+            "isMember": false,
             "roamed": false,
             "isStatic": false,
             "canBeInstantiated": true,
@@ -18,12 +18,13 @@
             },
             "type": null,
             "declarationLine": "class A {",
-            "documentation": null
+            "documentation": null,
+            "signatureInformation": null
         },
         "A->foo": {
             "fqn": "A->foo",
             "extends": [],
-            "isGlobal": false,
+            "isMember": true,
             "roamed": false,
             "isStatic": false,
             "canBeInstantiated": false,
@@ -35,10 +36,11 @@
                 },
                 "containerName": "A"
             },
-            "type__tostring": "string[]",
+            "type__tostring": "bool[]",
             "type": {},
             "declarationLine": "protected $foo;",
-            "documentation": null
+            "documentation": null,
+            "signatureInformation": null
         }
     }
 }

@@ -8,7 +8,7 @@
         "A": {
             "fqn": "A",
             "extends": [],
-            "isGlobal": true,
+            "isMember": false,
             "roamed": false,
             "isStatic": false,
             "canBeInstantiated": true,
@@ -22,12 +22,13 @@
             },
             "type": null,
             "declarationLine": "class A {",
-            "documentation": null
+            "documentation": null,
+            "signatureInformation": null
         },
         "A->a()": {
             "fqn": "A->a()",
             "extends": [],
-            "isGlobal": false,
+            "isMember": true,
             "roamed": false,
             "isStatic": false,
             "canBeInstantiated": false,
@@ -42,7 +43,12 @@
             "type__tostring": "mixed",
             "type": {},
             "declarationLine": "function a () {",
-            "documentation": null
+            "documentation": null,
+            "signatureInformation": {
+                "label": "()",
+                "documentation": null,
+                "parameters": []
+            }
         }
     }
 }

@@ -11,7 +11,7 @@
         "TestNamespace": {
             "fqn": "TestNamespace",
             "extends": [],
-            "isGlobal": true,
+            "isMember": false,
             "roamed": false,
             "isStatic": false,
             "canBeInstantiated": false,
@@ -25,12 +25,13 @@
             },
             "type": null,
             "declarationLine": "namespace TestNamespace;",
-            "documentation": null
+            "documentation": null,
+            "signatureInformation": null
         },
         "TestNamespace\\A": {
             "fqn": "TestNamespace\\A",
             "extends": [],
-            "isGlobal": true,
+            "isMember": false,
             "roamed": false,
             "isStatic": false,
             "canBeInstantiated": true,
@@ -44,12 +45,13 @@
             },
             "type": null,
             "declarationLine": "class A {",
-            "documentation": null
+            "documentation": null,
+            "signatureInformation": null
         },
         "TestNamespace\\A->a": {
             "fqn": "TestNamespace\\A->a",
             "extends": [],
-            "isGlobal": false,
+            "isMember": true,
             "roamed": false,
             "isStatic": false,
             "canBeInstantiated": false,
@@ -64,7 +66,8 @@
             "type__tostring": "int",
             "type": {},
             "declarationLine": "public $a;",
-            "documentation": null
+            "documentation": null,
+            "signatureInformation": null
         }
     }
 }

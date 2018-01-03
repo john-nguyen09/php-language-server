@@ -1,10 +1,14 @@
 {
-    "references": [],
+    "references": {
+        "B->hi": [
+            "./stringVariable.php"
+        ]
+    },
     "definitions": {
         "B": {
             "fqn": "B",
             "extends": [],
-            "isGlobal": true,
+            "isMember": false,
             "roamed": false,
             "isStatic": false,
             "canBeInstantiated": true,
@@ -18,12 +22,13 @@
             },
             "type": null,
             "declarationLine": "class B",
-            "documentation": null
+            "documentation": null,
+            "signatureInformation": null
         },
         "B->hi": {
             "fqn": "B->hi",
             "extends": [],
-            "isGlobal": false,
+            "isMember": true,
             "roamed": false,
             "isStatic": false,
             "canBeInstantiated": false,
@@ -38,12 +43,13 @@
             "type__tostring": "int",
             "type": {},
             "declarationLine": "public $hi;",
-            "documentation": null
+            "documentation": null,
+            "signatureInformation": null
         },
         "B->a()": {
             "fqn": "B->a()",
             "extends": [],
-            "isGlobal": false,
+            "isMember": true,
             "roamed": false,
             "isStatic": false,
             "canBeInstantiated": false,
@@ -58,7 +64,12 @@
             "type__tostring": "mixed",
             "type": {},
             "declarationLine": "function a () {",
-            "documentation": null
+            "documentation": null,
+            "signatureInformation": {
+                "label": "()",
+                "documentation": null,
+                "parameters": []
+            }
         }
     }
 }

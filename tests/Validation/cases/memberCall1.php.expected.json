@@ -14,7 +14,7 @@
         "MyNamespace": {
             "fqn": "MyNamespace",
             "extends": [],
-            "isGlobal": true,
+            "isMember": false,
             "roamed": false,
             "isStatic": false,
             "canBeInstantiated": false,
@@ -28,12 +28,13 @@
             },
             "type": null,
             "declarationLine": "namespace MyNamespace;",
-            "documentation": null
+            "documentation": null,
+            "signatureInformation": null
         },
         "MyNamespace\\ParseErrorsTest": {
             "fqn": "MyNamespace\\ParseErrorsTest",
             "extends": [],
-            "isGlobal": true,
+            "isMember": false,
             "roamed": false,
             "isStatic": false,
             "canBeInstantiated": true,
@@ -47,12 +48,13 @@
             },
             "type": null,
             "declarationLine": "class ParseErrorsTest",
-            "documentation": null
+            "documentation": null,
+            "signatureInformation": null
         },
         "MyNamespace\\ParseErrorsTest->setAccount()": {
             "fqn": "MyNamespace\\ParseErrorsTest->setAccount()",
             "extends": [],
-            "isGlobal": false,
+            "isMember": true,
             "roamed": false,
             "isStatic": false,
             "canBeInstantiated": false,
@@ -67,7 +69,17 @@
             "type__tostring": "mixed",
             "type": {},
             "declarationLine": "public function setAccount(AccountInterface $account)",
-            "documentation": null
+            "documentation": null,
+            "signatureInformation": {
+                "label": "(\\MyNamespace\\AccountInterface $account)",
+                "documentation": null,
+                "parameters": [
+                    {
+                        "label": "\\MyNamespace\\AccountInterface $account",
+                        "documentation": null
+                    }
+                ]
+            }
         }
     }
 }

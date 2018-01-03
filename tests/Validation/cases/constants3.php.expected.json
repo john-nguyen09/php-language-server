@@ -11,7 +11,7 @@
         "MyNamespace": {
             "fqn": "MyNamespace",
             "extends": [],
-            "isGlobal": true,
+            "isMember": false,
             "roamed": false,
             "isStatic": false,
             "canBeInstantiated": false,
@@ -25,12 +25,13 @@
             },
             "type": null,
             "declarationLine": "namespace MyNamespace;",
-            "documentation": null
+            "documentation": null,
+            "signatureInformation": null
         },
         "MyNamespace\\A": {
             "fqn": "MyNamespace\\A",
             "extends": [],
-            "isGlobal": true,
+            "isMember": false,
             "roamed": false,
             "isStatic": false,
             "canBeInstantiated": true,
@@ -44,12 +45,13 @@
             },
             "type": null,
             "declarationLine": "class A",
-            "documentation": null
+            "documentation": null,
+            "signatureInformation": null
         },
         "MyNamespace\\A::suite()": {
             "fqn": "MyNamespace\\A::suite()",
             "extends": [],
-            "isGlobal": false,
+            "isMember": true,
             "roamed": false,
             "isStatic": true,
             "canBeInstantiated": false,
@@ -64,7 +66,12 @@
             "type__tostring": "mixed",
             "type": {},
             "declarationLine": "public static function suite()",
-            "documentation": null
+            "documentation": null,
+            "signatureInformation": {
+                "label": "()",
+                "documentation": null,
+                "parameters": []
+            }
         }
     }
 }

@@ -1,10 +1,14 @@
 {
-    "references": [],
+    "references": {
+        "A": [
+            "./nameToken.php"
+        ]
+    },
     "definitions": {
         "A": {
             "fqn": "A",
             "extends": [],
-            "isGlobal": true,
+            "isMember": false,
             "roamed": false,
             "isStatic": false,
             "canBeInstantiated": true,
@@ -18,12 +22,13 @@
             },
             "type": null,
             "declarationLine": "class A {",
-            "documentation": null
+            "documentation": null,
+            "signatureInformation": null
         },
         "A->b()": {
             "fqn": "A->b()",
             "extends": [],
-            "isGlobal": false,
+            "isMember": true,
             "roamed": false,
             "isStatic": false,
             "canBeInstantiated": false,
@@ -38,7 +43,12 @@
             "type__tostring": "mixed",
             "type": {},
             "declarationLine": "function b() {",
-            "documentation": null
+            "documentation": null,
+            "signatureInformation": {
+                "label": "()",
+                "documentation": null,
+                "parameters": []
+            }
         }
     }
 }

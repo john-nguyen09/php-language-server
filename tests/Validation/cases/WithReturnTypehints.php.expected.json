@@ -3,7 +3,7 @@
         "Fixtures\\Prophecy\\EmptyClass": [
             "./WithReturnTypehints.php"
         ],
-        "self": [
+        "Fixtures\\Prophecy\\WithReturnTypehints": [
             "./WithReturnTypehints.php"
         ],
         "Fixtures\\Prophecy\\__CLASS__": [
@@ -11,16 +11,13 @@
         ],
         "__CLASS__": [
             "./WithReturnTypehints.php"
-        ],
-        "parent": [
-            "./WithReturnTypehints.php"
         ]
     },
     "definitions": {
         "Fixtures\\Prophecy": {
             "fqn": "Fixtures\\Prophecy",
             "extends": [],
-            "isGlobal": true,
+            "isMember": false,
             "roamed": false,
             "isStatic": false,
             "canBeInstantiated": false,
@@ -34,14 +31,15 @@
             },
             "type": null,
             "declarationLine": "namespace Fixtures\\Prophecy;",
-            "documentation": null
+            "documentation": null,
+            "signatureInformation": null
         },
         "Fixtures\\Prophecy\\WithReturnTypehints": {
             "fqn": "Fixtures\\Prophecy\\WithReturnTypehints",
             "extends": [
                 "Fixtures\\Prophecy\\EmptyClass"
             ],
-            "isGlobal": true,
+            "isMember": false,
             "roamed": false,
             "isStatic": false,
             "canBeInstantiated": true,
@@ -55,12 +53,13 @@
             },
             "type": null,
             "declarationLine": "class WithReturnTypehints extends EmptyClass",
-            "documentation": null
+            "documentation": null,
+            "signatureInformation": null
         },
         "Fixtures\\Prophecy\\WithReturnTypehints->getSelf()": {
             "fqn": "Fixtures\\Prophecy\\WithReturnTypehints->getSelf()",
             "extends": [],
-            "isGlobal": false,
+            "isMember": true,
             "roamed": false,
             "isStatic": false,
             "canBeInstantiated": false,
@@ -72,15 +71,20 @@
                 },
                 "containerName": "Fixtures\\Prophecy\\WithReturnTypehints"
             },
-            "type__tostring": "\\self",
+            "type__tostring": "\\Fixtures\\Prophecy\\WithReturnTypehints",
             "type": {},
             "declarationLine": "public function getSelf(): self {",
-            "documentation": null
+            "documentation": null,
+            "signatureInformation": {
+                "label": "()",
+                "documentation": null,
+                "parameters": []
+            }
         },
         "Fixtures\\Prophecy\\WithReturnTypehints->getName()": {
             "fqn": "Fixtures\\Prophecy\\WithReturnTypehints->getName()",
             "extends": [],
-            "isGlobal": false,
+            "isMember": true,
             "roamed": false,
             "isStatic": false,
             "canBeInstantiated": false,
@@ -95,12 +99,17 @@
             "type__tostring": "string",
             "type": {},
             "declarationLine": "public function getName(): string {",
-            "documentation": null
+            "documentation": null,
+            "signatureInformation": {
+                "label": "()",
+                "documentation": null,
+                "parameters": []
+            }
         },
         "Fixtures\\Prophecy\\WithReturnTypehints->getParent()": {
             "fqn": "Fixtures\\Prophecy\\WithReturnTypehints->getParent()",
             "extends": [],
-            "isGlobal": false,
+            "isMember": true,
             "roamed": false,
             "isStatic": false,
             "canBeInstantiated": false,
@@ -115,7 +124,12 @@
             "type__tostring": "\\parent",
             "type": {},
             "declarationLine": "public function getParent(): parent {",
-            "documentation": null
+            "documentation": null,
+            "signatureInformation": {
+                "label": "()",
+                "documentation": null,
+                "parameters": []
+            }
         }
     }
 }

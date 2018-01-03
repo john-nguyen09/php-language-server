@@ -11,7 +11,7 @@
         "B": {
             "fqn": "B",
             "extends": [],
-            "isGlobal": true,
+            "isMember": false,
             "roamed": false,
             "isStatic": false,
             "canBeInstantiated": false,
@@ -25,7 +25,8 @@
             },
             "type": null,
             "declarationLine": "namespace B;",
-            "documentation": null
+            "documentation": null,
+            "signatureInformation": null
         }
     }
 }

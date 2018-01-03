@@ -14,7 +14,7 @@
         "LanguageServer\\Tests\\Utils": {
             "fqn": "LanguageServer\\Tests\\Utils",
             "extends": [],
-            "isGlobal": true,
+            "isMember": false,
             "roamed": false,
             "isStatic": false,
             "canBeInstantiated": false,
@@ -28,7 +28,8 @@
             },
             "type": null,
             "declarationLine": "namespace LanguageServer\\Tests\\Utils;",
-            "documentation": null
+            "documentation": null,
+            "signatureInformation": null
         }
     }
 }

@@ -17,7 +17,7 @@
         "MyNamespace1": {
             "fqn": "MyNamespace1",
             "extends": [],
-            "isGlobal": true,
+            "isMember": false,
             "roamed": false,
             "isStatic": false,
             "canBeInstantiated": false,
@@ -31,12 +31,13 @@
             },
             "type": null,
             "declarationLine": "namespace MyNamespace1;",
-            "documentation": null
+            "documentation": null,
+            "signatureInformation": null
         },
         "MyNamespace1\\B": {
             "fqn": "MyNamespace1\\B",
             "extends": [],
-            "isGlobal": true,
+            "isMember": false,
             "roamed": false,
             "isStatic": false,
             "canBeInstantiated": true,
@@ -50,12 +51,13 @@
             },
             "type": null,
             "declarationLine": "class B {",
-            "documentation": null
+            "documentation": null,
+            "signatureInformation": null
         },
         "MyNamespace1\\B->b()": {
             "fqn": "MyNamespace1\\B->b()",
             "extends": [],
-            "isGlobal": false,
+            "isMember": true,
             "roamed": false,
             "isStatic": false,
             "canBeInstantiated": false,
@@ -70,12 +72,17 @@
             "type__tostring": "mixed",
             "type": {},
             "declarationLine": "function b() {",
-            "documentation": null
+            "documentation": null,
+            "signatureInformation": {
+                "label": "()",
+                "documentation": null,
+                "parameters": []
+            }
         },
         "MyNamespace2": {
             "fqn": "MyNamespace2",
             "extends": [],
-            "isGlobal": true,
+            "isMember": false,
             "roamed": false,
             "isStatic": false,
             "canBeInstantiated": false,
@@ -89,14 +96,15 @@
             },
             "type": null,
             "declarationLine": "namespace MyNamespace2;",
-            "documentation": null
+            "documentation": null,
+            "signatureInformation": null
         },
         "MyNamespace2\\A": {
             "fqn": "MyNamespace2\\A",
             "extends": [
                 "MyNamespace2\\MyNamespace1\\B"
             ],
-            "isGlobal": true,
+            "isMember": false,
             "roamed": false,
             "isStatic": false,
             "canBeInstantiated": true,
@@ -110,12 +118,13 @@
             },
             "type": null,
             "declarationLine": "class A extends MyNamespace1\\B {",
-            "documentation": null
+            "documentation": null,
+            "signatureInformation": null
         },
         "MyNamespace2\\A->a()": {
             "fqn": "MyNamespace2\\A->a()",
             "extends": [],
-            "isGlobal": false,
+            "isMember": true,
             "roamed": false,
             "isStatic": false,
             "canBeInstantiated": false,
@@ -130,7 +139,12 @@
             "type__tostring": "mixed",
             "type": {},
             "declarationLine": "function a () {",
-            "documentation": null
+            "documentation": null,
+            "signatureInformation": {
+                "label": "()",
+                "documentation": null,
+                "parameters": []
+            }
         }
     }
 }

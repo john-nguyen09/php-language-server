@@ -11,7 +11,7 @@
         "TestNamespace": {
             "fqn": "TestNamespace",
             "extends": [],
-            "isGlobal": true,
+            "isMember": false,
             "roamed": false,
             "isStatic": false,
             "canBeInstantiated": false,
@@ -25,12 +25,13 @@
             },
             "type": null,
             "declarationLine": "namespace TestNamespace;",
-            "documentation": null
+            "documentation": null,
+            "signatureInformation": null
         },
         "TestNamespace\\TestClass": {
             "fqn": "TestNamespace\\TestClass",
             "extends": [],
-            "isGlobal": true,
+            "isMember": false,
             "roamed": false,
             "isStatic": false,
             "canBeInstantiated": true,
@@ -44,12 +45,13 @@
             },
             "type": null,
             "declarationLine": "class TestClass",
-            "documentation": null
+            "documentation": null,
+            "signatureInformation": null
         },
         "TestNamespace\\TestClass->testProperty": {
             "fqn": "TestNamespace\\TestClass->testProperty",
             "extends": [],
-            "isGlobal": false,
+            "isMember": true,
             "roamed": false,
             "isStatic": false,
             "canBeInstantiated": false,
@@ -64,12 +66,13 @@
             "type__tostring": "mixed",
             "type": {},
             "declarationLine": "public $testProperty;",
-            "documentation": null
+            "documentation": null,
+            "signatureInformation": null
         },
         "TestNamespace\\TestClass->testMethod()": {
             "fqn": "TestNamespace\\TestClass->testMethod()",
             "extends": [],
-            "isGlobal": false,
+            "isMember": true,
             "roamed": false,
             "isStatic": false,
             "canBeInstantiated": false,
@@ -84,7 +87,17 @@
             "type__tostring": "mixed",
             "type": {},
             "declarationLine": "public function testMethod($testParameter)",
-            "documentation": null
+            "documentation": null,
+            "signatureInformation": {
+                "label": "(mixed $testParameter)",
+                "documentation": null,
+                "parameters": [
+                    {
+                        "label": "mixed $testParameter",
+                        "documentation": null
+                    }
+                ]
+            }
         }
     }
 }

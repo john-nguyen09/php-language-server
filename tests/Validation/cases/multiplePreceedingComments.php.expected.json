@@ -4,7 +4,7 @@
         "Foo": {
             "fqn": "Foo",
             "extends": [],
-            "isGlobal": true,
+            "isMember": false,
             "roamed": false,
             "isStatic": false,
             "canBeInstantiated": true,
@@ -18,12 +18,13 @@
             },
             "type": null,
             "declarationLine": "class Foo",
-            "documentation": null
+            "documentation": null,
+            "signatureInformation": null
         },
         "Foo->fn()": {
             "fqn": "Foo->fn()",
             "extends": [],
-            "isGlobal": false,
+            "isMember": true,
             "roamed": false,
             "isStatic": false,
             "canBeInstantiated": false,
@@ -38,7 +39,12 @@
             "type__tostring": "\\Iterator",
             "type": {},
             "declarationLine": "public function fn()",
-            "documentation": "Foo"
+            "documentation": "Foo",
+            "signatureInformation": {
+                "label": "()",
+                "documentation": "Foo",
+                "parameters": []
+            }
         }
     }
 }

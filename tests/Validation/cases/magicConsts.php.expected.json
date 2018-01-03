@@ -8,7 +8,7 @@
         "A": {
             "fqn": "A",
             "extends": [],
-            "isGlobal": true,
+            "isMember": false,
             "roamed": false,
             "isStatic": false,
             "canBeInstantiated": true,
@@ -22,12 +22,13 @@
             },
             "type": null,
             "declarationLine": "class A {",
-            "documentation": null
+            "documentation": null,
+            "signatureInformation": null
         },
         "A::$deprecationsTriggered": {
             "fqn": "A::$deprecationsTriggered",
             "extends": [],
-            "isGlobal": false,
+            "isMember": true,
             "roamed": false,
             "isStatic": true,
             "canBeInstantiated": false,
@@ -39,10 +40,11 @@
                 },
                 "containerName": "A"
             },
-            "type__tostring": "\\__CLASS__[]",
+            "type__tostring": "bool[]",
             "type": {},
             "declarationLine": "private static $deprecationsTriggered;",
-            "documentation": null
+            "documentation": null,
+            "signatureInformation": null
         }
     }
 }

@@ -4,7 +4,7 @@
         "A": {
             "fqn": "A",
             "extends": [],
-            "isGlobal": true,
+            "isMember": false,
             "roamed": false,
             "isStatic": false,
             "canBeInstantiated": false,
@@ -18,7 +18,8 @@
             },
             "type": null,
             "declarationLine": "interface A  {",
-            "documentation": null
+            "documentation": null,
+            "signatureInformation": null
         }
     }
 }
